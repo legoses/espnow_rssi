@@ -21,14 +21,21 @@
 #define I2C_SDA 39
 #define I2C_SCL 38
 
+char macAddr[][13] = {
+  {"c8c9a361cfea"},
+  {"F8A38F1D95CF"}
+  };
+
+int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
+
 //The mac address of the device you want to communicate with
-uint8_t broadcastAddress[] = {0xC8, 0xC9, 0xA3, 0x61, 0xCF, 0xEA};
+uint8_t broadcastAddress[20][6];
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 
 //Username you want to show up on other displays
-char userName[] = "UserName";
+char userName[] = "userName";
 
 //Hold info to send and recieve data
 typedef struct struct_message {
@@ -40,7 +47,8 @@ struct_message sendMessage;
 struct_message recvMessage;
 
 esp_now_peer_info_t peerInfo;
-
+int lineCount = 0;
+int file = 0;
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
@@ -81,6 +89,33 @@ void init_wifi()
 }
 
 
+void addPeerInfo()
+{
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+  uint8_t hexVal;
+  char tmpStr[2];
+
+  //Iterate through mac addresses
+  for(int j = 0; j < macNum; j++)
+  {
+    for(int i = 0; i < 12; i++)
+    {
+      if((i % 2 == 0) || (i == 0))
+      {
+        tmpStr[0] = macAddr[j][i];
+        tmpStr[1] = macAddr[j][i+1];
+        hexVal = (uint8_t)strtol(tmpStr, NULL, 16);
+        broadcastAddress[j][i/2] = hexVal;
+      }
+    }
+  memcpy(peerInfo.peer_addr, broadcastAddress[j], 6);
+  esp_now_add_peer(&peerInfo);
+  }
+}
+
+
+
 void setup() {
   Serial.begin(115200);
 
@@ -100,7 +135,6 @@ void setup() {
   delay(100);
   display.display();
 
-
   init_wifi();
 
   if(esp_now_init() != ESP_OK)
@@ -109,11 +143,7 @@ void setup() {
     return;
   }
 
-  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
-
-  ESP_ERROR_CHECK(esp_now_add_peer(&peerInfo));
+  addPeerInfo();
 
   //Copy username to sendMessate struct 
   strcpy(sendMessage.name, userName);
@@ -131,14 +161,28 @@ void setup() {
 }
 
 void loop() {
-  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t*)&sendMessage, sizeof(sendMessage));
+  /*
+  for(int i = 0; i < macNum; i++)
+  {
+    esp_err_t result = esp_now_send(broadcastAddress[i], (uint8_t*)&sendMessage, sizeof(sendMessage));
+    if(result == ESP_OK)
+    {
+      Serial.printf("Sent %i With Success\n", i);
+    }
+    else 
+    {
+      Serial.printf("Error Sending %i Data\n", i);
+    }
+  }
+  */
+  esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
   if(result == ESP_OK)
   {
-    Serial.println("Sent With Success");
+    Serial.printf("Sent %i With Success\n", i);
   }
   else 
   {
-    Serial.println("Error Sending Data");
+    Serial.printf("Error Sending %i Data\n", i);
   }
 
   delay(2000);
