@@ -14,6 +14,7 @@
 #include "esp_now.h"
 #include "esp_wifi.h"
 
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
@@ -21,21 +22,27 @@
 #define I2C_SDA 39
 #define I2C_SCL 38
 
+
 char macAddr[][13] = {
   {"c8c9a361cfea"},
   {"F8A38F1D95CF"}
-  };
+};
+
+//Hold mac address, username, rssi, and time since last seen
+char peerDisplayInfo[20][4];
+
+int delayVal = 10;
+
+//Username you want to show up on other displays
+char userName[] = "userName";
 
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 
 //The mac address of the device you want to communicate with
 uint8_t broadcastAddress[20][6];
 
+//Set up display
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-
-//Username you want to show up on other displays
-char userName[] = "userName";
 
 //Hold info to send and recieve data
 typedef struct struct_message {
@@ -60,7 +67,9 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
   //copy data to message struct
+  delayVal = 100;
   memcpy(&recvMessage, incomingData, sizeof(recvMessage)-8); // -8 is so that it does not overwrite the rssi variable, which is 8 bits long
+  delayVal = 0;
   
   //Display current connections
   display.clearDisplay();
@@ -73,6 +82,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 {
   //Get connection info
+  delay(delayVal);
   wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
   recvMessage.rssi = rssiInfo->rx_ctrl.rssi;
 }
@@ -99,6 +109,7 @@ void addPeerInfo()
   //Iterate through mac addresses
   for(int j = 0; j < macNum; j++)
   {
+    //Parse mac address and convert from string to hex value
     for(int i = 0; i < 12; i++)
     {
       if((i % 2 == 0) || (i == 0))
@@ -114,10 +125,9 @@ void addPeerInfo()
   }
 }
 
-
-
 void setup() {
   Serial.begin(115200);
+
 
   //Setup i2c connection 
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -161,28 +171,15 @@ void setup() {
 }
 
 void loop() {
-  /*
-  for(int i = 0; i < macNum; i++)
-  {
-    esp_err_t result = esp_now_send(broadcastAddress[i], (uint8_t*)&sendMessage, sizeof(sendMessage));
-    if(result == ESP_OK)
-    {
-      Serial.printf("Sent %i With Success\n", i);
-    }
-    else 
-    {
-      Serial.printf("Error Sending %i Data\n", i);
-    }
-  }
-  */
+  //Setting first value to NULL will send data to all registered peers
   esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
   if(result == ESP_OK)
   {
-    Serial.printf("Sent %i With Success\n", i);
+    Serial.println("Sent With Success");
   }
   else 
   {
-    Serial.printf("Error Sending %i Data\n", i);
+    Serial.println("Error Sending Data");
   }
 
   delay(2000);
