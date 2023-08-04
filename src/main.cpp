@@ -31,7 +31,8 @@ SemaphoreHandle_t xMutex = NULL;
 
 char macAddr[][13] = {
   {"c8c9a361cfea"},
-  {"F8A38F1D95CF"}
+  {"F8A38F1D95CF"}, //Fake mac for testing. Remove later
+  {"f412fa682eac"}
 };
 
 struct connectionInfo
@@ -133,6 +134,7 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
         {
           initNode(mac, incomingData, temp);
         }
+
         temp = temp->next;
       }
     }
@@ -143,7 +145,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 {
   //Get connection info
-  //delay(delayVal);
   if(xMutex != NULL)
   {
     if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
@@ -196,6 +197,7 @@ void addPeerInfo()
 
 
 void handleDisplay(void *pvParameters);
+void checkForDeadPeers(void *pvParameters);
 
 
 void setup() {
@@ -239,12 +241,25 @@ void setup() {
   display.println("Waiting for communication...");
   display.display();
 
+  //Tasks to run on second core
+  //When creating these functions, make sure they have some sort of return or vTaskDelete90, even if they are void
+  //Otherwise the program will crash
   xTaskCreatePinnedToCore(
     handleDisplay
     , "Print peers"
     , 2048
     , NULL
     , 1
+    , NULL
+    , ARDUINO_RUNNING_CORE
+  );
+
+  xTaskCreatePinnedToCore(
+    checkForDeadPeers
+    , "Print peers"
+    , 2048
+    , NULL
+    , 2
     , NULL
     , ARDUINO_RUNNING_CORE
   );
@@ -275,6 +290,51 @@ void loop() {
 }
 
 
+//Remove the first node in the linked list and deallocate memory
+void removeHeadNode()
+{
+  if(xMutex != NULL)
+  {
+    if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+    {
+      connectionInfo *node = headNode;
+      if(headNode->next != NULL)
+      {
+        headNode = headNode->next;
+        headNode->prev = NULL;
+        free(node);
+      }
+      
+    }
+    
+    xSemaphoreGive(xMutex);
+  }
+}
+
+
+//Check for inactive peers
+void checkForDeadPeers(void *pvParameters)
+{
+  (void)pvParameters;
+  while(true)
+  {
+    //Do not run right away
+    delay(230000);
+    connectionInfo *node = headNode;
+    
+    while(node != NULL)
+    {
+      if((millis() - node->lastSeen) > 230000 && (node->prev == NULL))
+      {
+        removeHeadNode();
+      }
+      //I keep forgetting to add this line, get an infinite loop, and wondering why the program crashes
+      node = node->next;
+    }
+  }
+}
+
+//Print out peers to the display
 void handleDisplay(void* pvParameters)
 {
   (void)pvParameters;
@@ -282,16 +342,24 @@ void handleDisplay(void* pvParameters)
   {
     connectionInfo *node = headNode;
 
-    display.clearDisplay();
-    display.setCursor(0, 10);
-    while(node != NULL)
+    
+    if(xMutex != NULL)
     {
-      display.print(node->userName);
-      display.print("   ");
-      display.println(node->rssi);
-      node = node->next;
+      if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+      {
+        display.clearDisplay();
+        display.setCursor(0, 10);
+        while(node != NULL)
+        {
+          display.print(node->userName);
+          display.print("   ");
+          display.println(node->rssi);
+          node = node->next;
+        }
+      display.display();
+      }
+      xSemaphoreGive(xMutex);
     }
-    display.display();
     delay(10000);
   }
   
