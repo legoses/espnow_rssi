@@ -22,16 +22,32 @@
 #define I2C_SDA 39
 #define I2C_SCL 38
 
+//Create mutex to lock objects and prevent race conditions
+#define USE_MUTEX
+#define ARDUINO_RUNNING_CORE 1
+
+SemaphoreHandle_t xMutex = NULL;
+
 
 char macAddr[][13] = {
   {"c8c9a361cfea"},
   {"F8A38F1D95CF"}
 };
 
-//Hold mac address, username, rssi, and time since last seen
-char peerDisplayInfo[20][4];
+struct connectionInfo
+{
+  uint8_t mac[5];
+  int8_t rssi;
+  char userName[32];
+  long lastSeen;
 
-int delayVal = 10;
+  struct connectionInfo *next;
+  struct connectionInfo *prev;
+};
+
+connectionInfo *headNode = NULL;
+
+const int MAX_DELAY = 100;
 
 //Username you want to show up on other displays
 char userName[] = "userName";
@@ -43,6 +59,7 @@ uint8_t broadcastAddress[20][6];
 
 //Set up display
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
 
 //Hold info to send and recieve data
 typedef struct struct_message {
@@ -64,27 +81,79 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 }
 
 
+void initNode(const uint8_t *mac, const uint8_t *incomingData, connectionInfo *node)
+{
+  connectionInfo *new_node = new connectionInfo();
+
+  for(int i = 0; i < 4; i++)
+  {
+    new_node->mac[i] = mac[i];
+  }
+  new_node->lastSeen = millis();
+  node->next = new_node;
+  new_node->prev = node;
+}
+
+
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-  //copy data to message struct
-  delayVal = 100;
-  memcpy(&recvMessage, incomingData, sizeof(recvMessage)-8); // -8 is so that it does not overwrite the rssi variable, which is 8 bits long
-  delayVal = 0;
-  
-  //Display current connections
-  display.clearDisplay();
-  display.setCursor(0,10);
-  display.printf("%s:    %i\n\r", recvMessage.name, recvMessage.rssi);
-  display.display();
+  if(xMutex != NULL)
+  {
+    if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+    {
+      int8_t rssi = recvMessage.rssi;
+      connectionInfo *temp = headNode;
+      int userFound = 0;
+
+      //Init the first node in linked list
+      if(headNode == NULL)
+      {
+        headNode = new connectionInfo();
+        for(int i = 0; i < 4; i++)
+        {
+          //copy mac to new node
+          headNode->mac[i] = mac[i];
+        }
+        //set current time
+        headNode->lastSeen = millis();
+      }
+      
+
+      while(temp != NULL)
+      {
+        Serial.println(memcmp(mac, temp->mac, 4));
+        if(memcmp(mac, temp->mac, 4) == 0)
+        {
+          userFound = 1;
+          temp->rssi = rssi;
+          memcpy(temp->userName, incomingData, 31);
+          temp->lastSeen = millis();
+        }
+        else if(temp->next == NULL && userFound == 0)
+        {
+          initNode(mac, incomingData, temp);
+        }
+        temp = temp->next;
+      }
+    }
+  }
 }
 
 
 void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 {
   //Get connection info
-  delay(delayVal);
-  wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
-  recvMessage.rssi = rssiInfo->rx_ctrl.rssi;
+  //delay(delayVal);
+  if(xMutex != NULL)
+  {
+    if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+    {
+      wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
+      recvMessage.rssi = rssiInfo->rx_ctrl.rssi;
+    }
+    
+    xSemaphoreGive(xMutex);
+  }
 }
 
 
@@ -125,8 +194,17 @@ void addPeerInfo()
   }
 }
 
+
+void handleDisplay(void *pvParameters);
+
+
 void setup() {
   Serial.begin(115200);
+
+#ifdef USE_MUTEX
+  xMutex = xSemaphoreCreateMutex();
+#endif
+
 
 
   //Setup i2c connection 
@@ -161,6 +239,17 @@ void setup() {
   display.println("Waiting for communication...");
   display.display();
 
+  xTaskCreatePinnedToCore(
+    handleDisplay
+    , "Print peers"
+    , 2048
+    , NULL
+    , 1
+    , NULL
+    , ARDUINO_RUNNING_CORE
+  );
+
+
   //Register funciton to be called every time an esp-now packet is revieved
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
@@ -184,3 +273,28 @@ void loop() {
 
   delay(2000);
 }
+
+
+void handleDisplay(void* pvParameters)
+{
+  (void)pvParameters;
+  while(true)
+  {
+    connectionInfo *node = headNode;
+
+    display.clearDisplay();
+    display.setCursor(0, 10);
+    while(node != NULL)
+    {
+      display.print(node->userName);
+      display.print("   ");
+      display.println(node->rssi);
+      node = node->next;
+    }
+    display.display();
+    delay(10000);
+  }
+  
+  return;
+}
+
