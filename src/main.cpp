@@ -8,19 +8,27 @@
 
 
 #include <Arduino.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_GFX.h>
+
+//#define WIFI_Kit_32_v3
+
 #include <Wire.h>
 #include "esp_now.h"
 #include "esp_wifi.h"
 
+#ifdef WIFI_Kit_32_v3
+# include "heltec.h"
+#else
+# include <Adafruit_SSD1306.h>
+# include <Adafruit_GFX.h>
+# define SCREEN_WIDTH 128
+# define SCREEN_HEIGHT 64
+# define OLED_RESET -1
+# define I2C_SDA 39
+# define I2C_SCL 38
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
 
-#define I2C_SDA 39
-#define I2C_SCL 38
 
 //Create mutex to lock objects and prevent race conditions
 #define USE_MUTEX
@@ -32,7 +40,9 @@ SemaphoreHandle_t xMutex = NULL;
 char macAddr[][13] = {
   {"c8c9a361cfea"},
   {"F8A38F1D95CF"}, //Fake mac for testing. Remove later
-  {"f412fa682eac"}
+  {"f412fa682eac"},
+  //{"7CDFA1E403AC"} //devkit
+  {"F412FA66EB00"} //heltec
 };
 
 struct connectionInfo
@@ -58,8 +68,7 @@ int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 //The mac address of the device you want to communicate with
 uint8_t broadcastAddress[20][6];
 
-//Set up display
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
 
 
 //Hold info to send and recieve data
@@ -85,7 +94,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 void initNode(const uint8_t *mac, const uint8_t *incomingData, connectionInfo *node)
 {
   connectionInfo *new_node = new connectionInfo();
-
+  Serial.println("initnode");
   for(int i = 0; i < 4; i++)
   {
     new_node->mac[i] = mac[i];
@@ -98,6 +107,7 @@ void initNode(const uint8_t *mac, const uint8_t *incomingData, connectionInfo *n
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+  Serial.println("recv Data");
   if(xMutex != NULL)
   {
     if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
@@ -129,8 +139,9 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
           temp->rssi = rssi;
           memcpy(temp->userName, incomingData, 31);
           temp->lastSeen = millis();
+          break;
         }
-        else if(temp->next == NULL && userFound == 0)
+        else if(temp->next == NULL)// && userFound == 0)
         {
           initNode(mac, incomingData, temp);
         }
@@ -203,16 +214,23 @@ void checkForDeadPeers(void *pvParameters);
 void setup() {
   Serial.begin(115200);
 
+
 #ifdef USE_MUTEX
   xMutex = xSemaphoreCreateMutex();
 #endif
 
-
-
+  //Init display
+#ifdef WIFI_Kit_32_V3
+  Heltec.begin(true, false, false);
+  Heltec.display->init();
+  Heltec.display->clear();
+  Heltec.display->setFont(ArialMT_Plain_10);
+  Heltec.display->drawString(0, 0, "Waiting for communication...");
+  Heltec.display->display();
+#else
   //Setup i2c connection 
   Wire.begin(I2C_SDA, I2C_SCL);
 
-  //Init display
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
   {
     Serial.println("Display allocation failed");
@@ -223,7 +241,12 @@ void setup() {
   display.setCursor(0, 10);
   display.clearDisplay(); 
   delay(100);
+  display.println("Waiting for communication...");
   display.display();
+#endif
+
+  Serial.print("setup() running on core ");
+  Serial.println(xPortGetCoreID());
 
   init_wifi();
 
@@ -238,12 +261,12 @@ void setup() {
   //Copy username to sendMessate struct 
   strcpy(sendMessage.name, userName);
 
-  display.println("Waiting for communication...");
-  display.display();
+  
 
   //Tasks to run on second core
   //When creating these functions, make sure they have some sort of return or vTaskDelete90, even if they are void
   //Otherwise the program will crash
+
   xTaskCreatePinnedToCore(
     handleDisplay
     , "Print peers"
@@ -251,7 +274,7 @@ void setup() {
     , NULL
     , 1
     , NULL
-    , ARDUINO_RUNNING_CORE
+    , 0
   );
 
   xTaskCreatePinnedToCore(
@@ -261,7 +284,7 @@ void setup() {
     , NULL
     , 2
     , NULL
-    , ARDUINO_RUNNING_CORE
+    , 0
   );
 
 
@@ -312,6 +335,21 @@ void removeHeadNode()
 }
 
 
+void removeNode(connectionInfo *node)
+{
+  if(node->next == NULL)
+  {
+    node->prev->next = NULL;
+  }
+  else
+  {
+    node->prev->next = node->next;
+    node->next->prev = node->prev;
+  }
+  free(node);
+}
+
+
 //Check for inactive peers
 void checkForDeadPeers(void *pvParameters)
 {
@@ -319,14 +357,18 @@ void checkForDeadPeers(void *pvParameters)
   while(true)
   {
     //Do not run right away
-    delay(230000);
+    delay(10000);
     connectionInfo *node = headNode;
     
     while(node != NULL)
     {
-      if((millis() - node->lastSeen) > 230000 && (node->prev == NULL))
+      if((millis() - node->lastSeen) > 10000 && (node->prev == NULL))
       {
         removeHeadNode();
+      }
+      else if(millis() - node->lastSeen > 10000)
+      {
+        removeNode(node);
       }
       //I keep forgetting to add this line, get an infinite loop, and wondering why the program crashes
       node = node->next;
@@ -347,16 +389,35 @@ void handleDisplay(void* pvParameters)
     {
       if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
       {
-        display.clearDisplay();
-        display.setCursor(0, 10);
+#ifdef WIFI_Kit_32_V3
+        Heltec.display->clear();
+        int yCursorPos = 10;
+        char rssi[5];
         while(node != NULL)
         {
+          snprintf(rssi, 5, "%d", node->rssi);
+          Heltec.display->drawString(0, yCursorPos, node->userName);
+          Heltec.display->drawString(80, yCursorPos, rssi);
+          yCursorPos+=10;
+          
+          node = node->next;
+        }
+        Heltec.display->display();
+#else
+        display.clearDisplay();
+        while(node != NULL)
+        {
+          
+          display.setCursor(0, 10);
           display.print(node->userName);
           display.print("   ");
           display.println(node->rssi);
+
           node = node->next;
         }
-      display.display();
+        display.display();
+#endif
+
       }
       xSemaphoreGive(xMutex);
     }
