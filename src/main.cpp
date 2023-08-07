@@ -6,10 +6,10 @@
   received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>. 
 */
 
-
 #include <Arduino.h>
 
 //#define WIFI_Kit_32_v3
+#define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 15
 
 #include <Wire.h>
 #include "esp_now.h"
@@ -23,12 +23,12 @@
 # define SCREEN_WIDTH 128
 # define SCREEN_HEIGHT 64
 # define OLED_RESET -1
-# define I2C_SDA 39
-# define I2C_SCL 38
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
-
+#define I2C_SDA 39
+#define I2C_SCL 38
 
 //Create mutex to lock objects and prevent race conditions
 #define USE_MUTEX
@@ -36,29 +36,28 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 SemaphoreHandle_t xMutex = NULL;
 
+static const char *pmk = "BDYx9K3HhP7tsZwl";
+static const char *lmk = "honHw5sFkCmx74q5";
 
 char macAddr[][13] = {
-  {"c8c9a361cfea"},
+  //{"c8c9a361cfea"},
   {"F8A38F1D95CF"}, //Fake mac for testing. Remove later
   {"f412fa682eac"},
   //{"7CDFA1E403AC"} //devkit
   {"F412FA66EB00"} //heltec
 };
 
-struct connectionInfo
-{
-  uint8_t mac[5];
-  int8_t rssi;
-  char userName[32];
-  long lastSeen;
+const int ORDERED_LIST_LEN = 25;
 
-  struct connectionInfo *next;
-  struct connectionInfo *prev;
-};
+uint8_t incomingMac[ORDERED_LIST_LEN][5];
+int8_t rssi[ORDERED_LIST_LEN];
+char userNameList[ORDERED_LIST_LEN][32];
+long lastSeen[ORDERED_LIST_LEN];
 
-connectionInfo *headNode = NULL;
+int numCurPeer = 0;
 
-const int MAX_DELAY = 100;
+
+const int MAX_DELAY = 1000;
 
 //Username you want to show up on other displays
 char userName[] = "userName";
@@ -67,9 +66,6 @@ int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 
 //The mac address of the device you want to communicate with
 uint8_t broadcastAddress[20][6];
-
-
-
 
 //Hold info to send and recieve data
 typedef struct struct_message {
@@ -91,17 +87,25 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 }
 
 
-void initNode(const uint8_t *mac, const uint8_t *incomingData, connectionInfo *node)
+int compareMac(uint8_t knownMac[], uint8_t recvMac[])
 {
-  connectionInfo *new_node = new connectionInfo();
-  Serial.println("initnode");
   for(int i = 0; i < 4; i++)
   {
-    new_node->mac[i] = mac[i];
+    if(knownMac[i] != recvMac[i])
+    {
+      return 1;
+    }
   }
-  new_node->lastSeen = millis();
-  node->next = new_node;
-  new_node->prev = node;
+  return 0;
+}
+
+
+void copyMac(const uint8_t *mac, int j)
+{
+  for(int i = 0; i < 4; i++)
+  {
+    incomingMac[j][i] = mac[i];
+  }
 }
 
 
@@ -112,43 +116,46 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
   {
     if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
     {
-      int8_t rssi = recvMessage.rssi;
-      connectionInfo *temp = headNode;
-      int userFound = 0;
+      int8_t tempRssi = recvMessage.rssi;
 
-      //Init the first node in linked list
-      if(headNode == NULL)
+      for(int i = 0; i <  ORDERED_LIST_LEN; i++)
       {
-        headNode = new connectionInfo();
-        for(int i = 0; i < 4; i++)
+        //Init first peer
+        if(numCurPeer == 0)
         {
-          //copy mac to new node
-          headNode->mac[i] = mac[i];
-        }
-        //set current time
-        headNode->lastSeen = millis();
-      }
-      
-
-      while(temp != NULL)
-      {
-        Serial.println(memcmp(mac, temp->mac, 4));
-        if(memcmp(mac, temp->mac, 4) == 0)
-        {
-          userFound = 1;
-          temp->rssi = rssi;
-          memcpy(temp->userName, incomingData, 31);
-          temp->lastSeen = millis();
+          copyMac(mac, 0);
+          rssi[0] = tempRssi;
+          memcpy(userNameList[0], incomingData, 31);
+          lastSeen[0] = millis();
+          numCurPeer++;
           break;
         }
-        else if(temp->next == NULL)// && userFound == 0)
+        //update peers
+        else if(memcmp(mac, incomingMac[i], 4) == 0)
         {
-          initNode(mac, incomingData, temp);
+          Serial.print("updating ");
+          Serial.println(i);
+          rssi[i] = tempRssi;
+          memcpy(userNameList[i], incomingData, 31);
+          lastSeen[i] = millis();
+          break;
+        }
+        //add new peer
+        else if(i > numCurPeer-1)
+        {
+          Serial.print("new peer ");
+          Serial.println(i);
+          copyMac(mac, i);
+          rssi[i] = tempRssi;
+          memcpy(userNameList[i], incomingData, 31);
+          lastSeen[i] = millis();
+          numCurPeer++;
+          break;
         }
 
-        temp = temp->next;
       }
     }
+    xSemaphoreGive(xMutex);
   }
 }
 
@@ -183,7 +190,7 @@ void init_wifi()
 void addPeerInfo()
 {
   peerInfo.channel = 0;
-  peerInfo.encrypt = false;
+  
   uint8_t hexVal;
   char tmpStr[2];
 
@@ -202,6 +209,12 @@ void addPeerInfo()
       }
     }
   memcpy(peerInfo.peer_addr, broadcastAddress[j], 6);
+
+  for(int i = 0; i < 16; i++)
+  {
+    peerInfo.lmk[i] = lmk[i];
+  }
+  peerInfo.encrypt = true;
   esp_now_add_peer(&peerInfo);
   }
 }
@@ -213,6 +226,13 @@ void checkForDeadPeers(void *pvParameters);
 
 void setup() {
   Serial.begin(115200);
+
+  //Fill arrays with temp data
+  for(int i = 0; i < ORDERED_LIST_LEN; i++)
+  {
+    rssi[i] = 1;
+    incomingMac[i][0] = 1;
+  }
 
 
 #ifdef USE_MUTEX
@@ -255,7 +275,7 @@ void setup() {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
-
+  esp_now_set_pmk((uint8_t*)pmk);
   addPeerInfo();
 
   //Copy username to sendMessate struct 
@@ -270,7 +290,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     handleDisplay
     , "Print peers"
-    , 2048
+    , 4096
     , NULL
     , 1
     , NULL
@@ -313,117 +333,167 @@ void loop() {
 }
 
 
-//Remove the first node in the linked list and deallocate memory
-void removeHeadNode()
+void removeItem(int item)
 {
-  if(xMutex != NULL)
+  for(int i = item; i < ORDERED_LIST_LEN-1; i++)
   {
-    if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
-    {
-      connectionInfo *node = headNode;
-      if(headNode->next != NULL)
-      {
-        headNode = headNode->next;
-        headNode->prev = NULL;
-        free(node);
-      }
-      
-    }
+    Serial.println("removing");
+    Serial.println(i);
+    memcpy(incomingMac[i], incomingMac[i+1], 4);
+    rssi[i] = rssi[i+1];
+    memcpy(userNameList[i], userNameList[i+1], 31);
+    lastSeen[i] = lastSeen[i+1];
     
-    xSemaphoreGive(xMutex);
   }
+  rssi[24] = 1;
+  incomingMac[24][0] = 1;
 }
 
 
-void removeNode(connectionInfo *node)
+void checkForDeadPeers(void* pvParameters)
 {
-  if(node->next == NULL)
-  {
-    node->prev->next = NULL;
-  }
-  else
-  {
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
-  }
-  free(node);
-}
-
-
-//Check for inactive peers
-void checkForDeadPeers(void *pvParameters)
-{
+  //I don't think this does anything since I don't pass any parameter to this funciton
+  //Possibly delete
   (void)pvParameters;
+  delay(10000);
   while(true)
   {
-    //Do not run right away
-    delay(10000);
-    connectionInfo *node = headNode;
-    
-    while(node != NULL)
+    int i = 0;
+    while(incomingMac[i][0] != 1)
     {
-      if((millis() - node->lastSeen) > 10000 && (node->prev == NULL))
+      Serial.println(i);
+      if(millis() - lastSeen[i] > 10000)
       {
-        removeHeadNode();
+          if(xMutex != NULL)
+          {
+            if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+            {
+              removeItem(i);
+              numCurPeer--;
+            }
+            xSemaphoreGive(xMutex);
+        } 
       }
-      else if(millis() - node->lastSeen > 10000)
+      i++;
+    }
+    delay(10000);
+  }
+  return;
+}
+
+//Move from the global array to a local one for sorting
+//Soring global may not be an issue any more because im not using a linked list?
+void loadList(int8_t rssiArr[], char sortUserNameList[][32])
+{
+  Serial.print("peers ");
+  Serial.println(numCurPeer);
+
+  for(int i = 0; i < numCurPeer; i++)
+  {
+
+    Serial.println(i);
+    rssiArr[i] = rssi[i];
+    memcpy(sortUserNameList[i], userNameList[i], 31);
+  }
+
+}
+
+
+//Simple bubble sort
+void sortList(int8_t rssiArray[], char sortUserNameList[][32])
+{
+  int8_t rssiPlaceHolder;
+  char namePlaceHolder[32];
+
+  if(numCurPeer > 1)
+  {
+    for(int i = 0; i < numCurPeer; i++)
+    {
+      if((rssiArray[i] < rssiArray[i+1]))
       {
-        removeNode(node);
+        rssiPlaceHolder = rssiArray[i];
+        memcpy(namePlaceHolder, sortUserNameList[i], 31);
+
+        rssiArray[i] = rssiArray[i+1];
+        memcpy(sortUserNameList[i], sortUserNameList[i+1], 31);
+
+        rssiArray[i+1] = rssiPlaceHolder;
+        memcpy(sortUserNameList[i+1], namePlaceHolder, 31);
+        i = 0;
       }
-      //I keep forgetting to add this line, get an infinite loop, and wondering why the program crashes
-      node = node->next;
+      Serial.print("Placeholder ");
+      Serial.println(rssiPlaceHolder);
     }
   }
-}
+  
 
 //Print out peers to the display
 void handleDisplay(void* pvParameters)
 {
   (void)pvParameters;
+  int8_t rssiArr[ORDERED_LIST_LEN];
+  char sortUserNameList[ORDERED_LIST_LEN][32];
+
+  
   while(true)
   {
-    connectionInfo *node = headNode;
-
-    
     if(xMutex != NULL)
     {
       if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
       {
+        //Load list into local array and sort
+        loadList(rssiArr, sortUserNameList);
+        sortList(rssiArr, sortUserNameList);
+
+//Display peers on heltec
 #ifdef WIFI_Kit_32_V3
+
         Heltec.display->clear();
         int yCursorPos = 10;
-        char rssi[5];
-        while(node != NULL)
+        char tmpRssi[6];
+        Serial.println("display test");
+        
+        if(numCurPeer == 0)
         {
-          snprintf(rssi, 5, "%d", node->rssi);
-          Heltec.display->drawString(0, yCursorPos, node->userName);
-          Heltec.display->drawString(80, yCursorPos, rssi);
-          yCursorPos+=10;
-          
-          node = node->next;
+          Heltec.display->drawString(0, yCursorPos, "You Are Alone.");
+        }
+        else
+        {
+          for(int i = 0; i < numCurPeer; i++)
+          {
+            Serial.println(i);
+            snprintf(tmpRssi, 5, "%d", rssiArr[i]);
+            Heltec.display->drawString(0, yCursorPos, sortUserNameList[i]);
+            Heltec.display->drawString(80, yCursorPos, tmpRssi);
+          }
         }
         Heltec.display->display();
+
+//Display peers on cc1101
 #else
         display.clearDisplay();
-        while(node != NULL)
-        {
-          
-          display.setCursor(0, 10);
-          display.print(node->userName);
-          display.print("   ");
-          display.println(node->rssi);
+        display.setCursor(0, 10);
 
-          node = node->next;
+        if(numCurPeer == 0)
+        {
+          display.println("You Are Alone.");
+        }
+        else
+        {
+          for(int i = 0; i < numCurPeer; i++)
+          {
+            display.print(sortUserNameList[i]);
+            display.print("   ");
+            display.println(rssiArr[i]);
+          }
         }
         display.display();
-#endif
 
+#endif
       }
       xSemaphoreGive(xMutex);
     }
     delay(10000);
   }
-  
   return;
 }
-
