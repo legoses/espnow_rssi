@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-#define WIFI_Kit_32_v3
+
 #define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 15
 
 #include <Wire.h>
@@ -240,7 +240,7 @@ void setup() {
 #endif
 
   //Init display
-#ifdef WIFI_Kit_32_V3
+#ifdef heltec_wifi_kit_32_V3
   Heltec.begin(true, false, false);
   Heltec.display->init();
   Heltec.display->clear();
@@ -447,7 +447,7 @@ void handleDisplay(void* pvParameters)
         sortList(rssiArr, sortUserNameList);
 
 //Display peers on heltec
-#ifdef WIFI_Kit_32_V3
+#ifdef heltec_wifi_kit_32_V3
 
         Heltec.display->clear();
         int yCursorPos = 10;
