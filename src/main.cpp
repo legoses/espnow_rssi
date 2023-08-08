@@ -8,14 +8,14 @@
 
 #include <Arduino.h>
 
-
+#define heltec_wifi_kit_32_V3
 #define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 15
 
 #include <Wire.h>
 #include "esp_now.h"
 #include "esp_wifi.h"
 
-#ifdef WIFI_Kit_32_v3
+#ifdef heltec_wifi_kit_32_V3
 # include "heltec.h"
 #else
 # include <Adafruit_SSD1306.h>
@@ -23,12 +23,12 @@
 # define SCREEN_WIDTH 128
 # define SCREEN_HEIGHT 64
 # define OLED_RESET -1
-
+# define I2C_SDA 39
+# define I2C_SCL 38
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
-#define I2C_SDA 39
-#define I2C_SCL 38
+
 
 //Create mutex to lock objects and prevent race conditions
 #define USE_MUTEX
@@ -38,6 +38,9 @@ SemaphoreHandle_t xMutex = NULL;
 
 static const char *pmk = "BDYx9K3HhP7tsZwl";
 static const char *lmk = "honHw5sFkCmx74q5";
+
+//Username you want to show up on other displays
+char userName[] = "userName";
 
 char macAddr[][13] = {
   //{"c8c9a361cfea"},
@@ -58,9 +61,6 @@ int numCurPeer = 0;
 
 
 const int MAX_DELAY = 1000;
-
-//Username you want to show up on other displays
-char userName[] = "userName";
 
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 
