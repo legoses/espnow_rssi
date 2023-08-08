@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-//#define WIFI_Kit_32_v3
+#define WIFI_Kit_32_v3
 #define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 15
 
 #include <Wire.h>
@@ -43,8 +43,8 @@ char macAddr[][13] = {
   //{"c8c9a361cfea"},
   {"F8A38F1D95CF"}, //Fake mac for testing. Remove later
   {"f412fa682eac"},
-  //{"7CDFA1E403AC"} //devkit
-  {"F412FA66EB00"} //heltec
+  {"7CDFA1E403AC"} //devkit
+  //{"F412FA66EB00"} //heltec
 };
 
 const int ORDERED_LIST_LEN = 25;
@@ -425,7 +425,8 @@ void sortList(int8_t rssiArray[], char sortUserNameList[][32])
       Serial.println(rssiPlaceHolder);
     }
   }
-  
+}
+ 
 
 //Print out peers to the display
 void handleDisplay(void* pvParameters)
