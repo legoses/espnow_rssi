@@ -40,14 +40,15 @@ static const char *pmk = "BDYx9K3HhP7tsZwl";
 static const char *lmk = "honHw5sFkCmx74q5";
 
 //Username you want to show up on other displays
-char userName[] = "userName";
+char userName[] = "legoses";
 
 char macAddr[][13] = {
-  //{"c8c9a361cfea"},
-  {"F8A38F1D95CF"}, //Fake mac for testing. Remove later
-  {"f412fa682eac"},
-  {"7CDFA1E403AC"} //devkit
-  //{"F412FA66EB00"} //heltec
+  {"f412fa682eac"}, //eric
+  {"7CDFA1E403AC"}, //devkit, kyle
+  //{"F412FA66EB00"}, //heltec, kyle
+  {"C8F09EA7B818"}, //paul
+  {"F412FA66E9EC"}, //paul
+  {"F412FA4F71EC"}, //patrick
 };
 
 const int ORDERED_LIST_LEN = 25;
@@ -466,6 +467,7 @@ void handleDisplay(void* pvParameters)
             snprintf(tmpRssi, 5, "%d", rssiArr[i]);
             Heltec.display->drawString(0, yCursorPos, sortUserNameList[i]);
             Heltec.display->drawString(80, yCursorPos, tmpRssi);
+            yCursorPos+=10;
           }
         }
         Heltec.display->display();
