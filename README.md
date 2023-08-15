@@ -27,3 +27,7 @@ of the board:
 - e.g. `#define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 15`.
 - Set 'encryptESPNOW' to true.
 - Change the values of lmk and pmk to unique 16 byte (26 character) strings. These strings must be the same on all devices you wish to communicate with.
+
+### Knows issues
+- Sometimes sorting does not work quite right
+- Names will briefly appear twice when a peer is removed
