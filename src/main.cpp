@@ -9,7 +9,8 @@
 #include <Arduino.h>
 
 #define heltec_wifi_kit_32_V3
-#define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 15
+#define USE_MUTEX
+#define ARDUINO_RUNNING_CORE 1
 
 #include <Wire.h>
 #include "esp_now.h"
@@ -29,27 +30,29 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
 
+//Change to true to enable encryption
+bool encryptESPNOW = false;
 
-//Create mutex to lock objects and prevent race conditions
-#define USE_MUTEX
-#define ARDUINO_RUNNING_CORE 1
-
-SemaphoreHandle_t xMutex = NULL;
-
-static const char *pmk = "BDYx9K3HhP7tsZwl";
-static const char *lmk = "honHw5sFkCmx74q5";
+//Each of these must contain a 16 byte string
+static const char *pmk = "<PMK here>";
+static const char *lmk = "<LMK here";
 
 //Username you want to show up on other displays
-char userName[] = "legoses";
+char userName[] = "<User name Here>";
 
+//Insert the MAC addresses of the boards this board will be communicating with
+//Insert mac address ad string, removing colons
 char macAddr[][13] = {
-  {"f412fa682eac"}, //eric
-  {"7CDFA1E403AC"}, //devkit, kyle
-  //{"F412FA66EB00"}, //heltec, kyle
-  {"C8F09EA7B818"}, //paul
-  {"F412FA66E9EC"}, //paul
-  {"F412FA4F71EC"}, //patrick
+  // {"8E5CDAEE1697"}, Example mac
+  // {"0504A4C587AF"}  Example mac
 };
+
+const int SCREEN_REFRESH = 2500;
+
+//Hold mac address once parsed
+uint8_t broadcastAddress[20][6];
+
+const int MAX_DELAY = 1000;
 
 const int ORDERED_LIST_LEN = 25;
 
@@ -60,17 +63,10 @@ long lastSeen[ORDERED_LIST_LEN];
 
 int numCurPeer = 0;
 
-
-const int MAX_DELAY = 1000;
-
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
-
-//The mac address of the device you want to communicate with
-uint8_t broadcastAddress[20][6];
 
 //Hold info to send and recieve data
 typedef struct struct_message {
-  char name[32];
   int8_t rssi;
 } struct_message;
 
@@ -81,6 +77,11 @@ esp_now_peer_info_t peerInfo;
 int lineCount = 0;
 int file = 0;
 
+//Create mutex to lock objects and prevent race conditions
+
+
+SemaphoreHandle_t xMutex = NULL;
+
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
   Serial.print("\r\nLast packet send status: ");
@@ -90,7 +91,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 
 int compareMac(uint8_t knownMac[], uint8_t recvMac[])
 {
-  for(int i = 0; i < 4; i++)
+  for(int i = 0; i < 5; i++)
   {
     if(knownMac[i] != recvMac[i])
     {
@@ -112,12 +113,35 @@ void copyMac(const uint8_t *mac, int j)
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
+  char buf[18];
   Serial.println("recv Data");
+  Serial.print("Recieved MAC: ");
+  snprintf(buf, sizeof(buf), "%02x:%02x:%02x::%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  for(int i = 0; i < 4; i++)
+  {
+    Serial.print(mac[i]);
+    Serial.print(" ");
+  }
+  //Debug
+  Serial.println();
+  Serial.println(buf);
+  Serial.print("Incoming Data: ");
+  Serial.println(*incomingData);
+  Serial.println();
+  Serial.println();
   if(xMutex != NULL)
   {
     if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
     {
       int8_t tempRssi = recvMessage.rssi;
+
+      for(int i = 0; i < 4; i++)
+      {
+      Serial.print(mac[i]);
+      }
+
+      Serial.println();
+      Serial.println((char*)incomingData);
 
       for(int i = 0; i <  ORDERED_LIST_LEN; i++)
       {
@@ -190,6 +214,7 @@ void init_wifi()
 
 void addPeerInfo()
 {
+  //Set channel
   peerInfo.channel = 0;
   
   uint8_t hexVal;
@@ -215,7 +240,7 @@ void addPeerInfo()
   {
     peerInfo.lmk[i] = lmk[i];
   }
-  peerInfo.encrypt = true;
+  peerInfo.encrypt = encryptESPNOW;
   esp_now_add_peer(&peerInfo);
   }
 }
@@ -227,14 +252,6 @@ void checkForDeadPeers(void *pvParameters);
 
 void setup() {
   Serial.begin(115200);
-
-  //Fill arrays with temp data
-  for(int i = 0; i < ORDERED_LIST_LEN; i++)
-  {
-    rssi[i] = 1;
-    incomingMac[i][0] = 1;
-  }
-
 
 #ifdef USE_MUTEX
   xMutex = xSemaphoreCreateMutex();
@@ -248,6 +265,8 @@ void setup() {
   Heltec.display->setFont(ArialMT_Plain_10);
   Heltec.display->drawString(0, 0, "Waiting for communication...");
   Heltec.display->display();
+
+
 #else
   //Setup i2c connection 
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -278,11 +297,6 @@ void setup() {
   }
   esp_now_set_pmk((uint8_t*)pmk);
   addPeerInfo();
-
-  //Copy username to sendMessate struct 
-  strcpy(sendMessage.name, userName);
-
-  
 
   //Tasks to run on second core
   //When creating these functions, make sure they have some sort of return or vTaskDelete90, even if they are void
@@ -318,6 +332,7 @@ void setup() {
   esp_wifi_set_promiscuous_rx_cb(promiscuousRecv);
 }
 
+
 void loop() {
   //Setting first value to NULL will send data to all registered peers
   esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
@@ -329,11 +344,10 @@ void loop() {
   {
     Serial.println("Error Sending Data");
   }
-
   delay(2000);
 }
 
-
+//Remove peers who haven't been seen in 10 seconds
 void removeItem(int item)
 {
   for(int i = item; i < ORDERED_LIST_LEN-1; i++)
@@ -346,8 +360,6 @@ void removeItem(int item)
     lastSeen[i] = lastSeen[i+1];
     
   }
-  rssi[24] = 1;
-  incomingMac[24][0] = 1;
 }
 
 
@@ -359,8 +371,8 @@ void checkForDeadPeers(void* pvParameters)
   delay(10000);
   while(true)
   {
-    int i = 0;
-    while(incomingMac[i][0] != 1)
+    //while(incomingMac[i][0] != 1)
+    for(int i = 0; i < numCurPeer; i++)
     {
       Serial.println(i);
       if(millis() - lastSeen[i] > 10000)
@@ -375,7 +387,6 @@ void checkForDeadPeers(void* pvParameters)
             xSemaphoreGive(xMutex);
         } 
       }
-      i++;
     }
     delay(10000);
   }
@@ -391,7 +402,6 @@ void loadList(int8_t rssiArr[], char sortUserNameList[][32])
 
   for(int i = 0; i < numCurPeer; i++)
   {
-
     Serial.println(i);
     rssiArr[i] = rssi[i];
     memcpy(sortUserNameList[i], userNameList[i], 31);
@@ -435,12 +445,12 @@ void handleDisplay(void* pvParameters)
   (void)pvParameters;
   int8_t rssiArr[ORDERED_LIST_LEN];
   char sortUserNameList[ORDERED_LIST_LEN][32];
-
   
   while(true)
   {
     if(xMutex != NULL)
     {
+      delay(SCREEN_REFRESH);
       if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
       {
         //Load list into local array and sort
@@ -449,11 +459,9 @@ void handleDisplay(void* pvParameters)
 
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
-
         Heltec.display->clear();
         int yCursorPos = 10;
         char tmpRssi[6];
-        Serial.println("display test");
         
         if(numCurPeer == 0)
         {
@@ -495,8 +503,7 @@ void handleDisplay(void* pvParameters)
 #endif
       }
       xSemaphoreGive(xMutex);
-    }
-    delay(10000);
+    } 
   }
   return;
 }
