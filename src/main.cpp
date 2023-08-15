@@ -89,19 +89,6 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 }
 
 
-int compareMac(uint8_t knownMac[], uint8_t recvMac[])
-{
-  for(int i = 0; i < 5; i++)
-  {
-    if(knownMac[i] != recvMac[i])
-    {
-      return 1;
-    }
-  }
-  return 0;
-}
-
-
 void copyMac(const uint8_t *mac, int j)
 {
   for(int i = 0; i < 4; i++)
