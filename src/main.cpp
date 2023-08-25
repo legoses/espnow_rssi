@@ -7,6 +7,8 @@
 */
 
 #include <Arduino.h>
+#include <badge_images.h>
+#include <display_username.h>
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -38,7 +40,7 @@ static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here";
 
 //Username you want to show up on other displays
-char userName[] = "<User name Here>";
+char userName[] = "legoses";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
@@ -64,6 +66,7 @@ long lastSeen[ORDERED_LIST_LEN];
 int numCurPeer = 0;
 
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
+long timeSinceLastLogo = 0;
 
 //Hold info to send and recieve data
 typedef struct struct_message {
@@ -78,8 +81,6 @@ int lineCount = 0;
 int file = 0;
 
 //Create mutex to lock objects and prevent race conditions
-
-
 SemaphoreHandle_t xMutex = NULL;
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
@@ -233,6 +234,27 @@ void addPeerInfo()
 }
 
 
+void displayLogos()
+{
+  int screenEdgeBuf = ((img_buffer / 2) * -1) + 10;
+  int pimaLogoDelay = 0;
+
+  for(int i = 28; i > screenEdgeBuf; i-=2)
+  {
+    Heltec.display->clear();
+    Heltec.display->drawXbm(i, 0, 71, 62, pima_logo);
+    Heltec.display->display();
+    delay(25);
+    pimaLogoDelay+=25;
+  }
+  delay(2500-pimaLogoDelay);
+  Heltec.display->clear();
+  Heltec.display->drawXbm(screenEdgeBuf, 0, 71, 62, range_logo);
+  Heltec.display->display();
+  delay(2500);
+}
+
+
 void handleDisplay(void *pvParameters);
 void checkForDeadPeers(void *pvParameters);
 
@@ -250,9 +272,9 @@ void setup() {
   Heltec.display->init();
   Heltec.display->clear();
   Heltec.display->setFont(ArialMT_Plain_10);
-  Heltec.display->drawString(0, 0, "Waiting for communication...");
-  Heltec.display->display();
-
+ 
+  displayUsername(userName);
+  displayLogos();
 
 #else
   //Setup i2c connection 
@@ -358,7 +380,6 @@ void checkForDeadPeers(void* pvParameters)
   delay(10000);
   while(true)
   {
-    //while(incomingMac[i][0] != 1)
     for(int i = 0; i < numCurPeer; i++)
     {
       Serial.println(i);
@@ -400,13 +421,15 @@ void loadList(int8_t rssiArr[], char sortUserNameList[][32])
 //Simple bubble sort
 void sortList(int8_t rssiArray[], char sortUserNameList[][32])
 {
-  int8_t rssiPlaceHolder;
-  char namePlaceHolder[32];
+  
 
   if(numCurPeer > 1)
   {
     for(int i = 0; i < numCurPeer; i++)
     {
+      int8_t rssiPlaceHolder;
+      char namePlaceHolder[32];
+
       if((rssiArray[i] < rssiArray[i+1]))
       {
         rssiPlaceHolder = rssiArray[i];
@@ -419,9 +442,17 @@ void sortList(int8_t rssiArray[], char sortUserNameList[][32])
         memcpy(sortUserNameList[i+1], namePlaceHolder, 31);
         i = 0;
       }
-      Serial.print("Placeholder ");
-      Serial.println(rssiPlaceHolder);
     }
+  }
+}
+
+
+void checkLogoTime()
+{
+  if(millis() - timeSinceLastLogo > 25000)
+  {
+    displayLogos();
+    timeSinceLastLogo = millis();
   }
 }
  
@@ -438,6 +469,8 @@ void handleDisplay(void* pvParameters)
     if(xMutex != NULL)
     {
       delay(SCREEN_REFRESH);
+      checkLogoTime();
+
       if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
       {
         //Load list into local array and sort
