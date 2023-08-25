@@ -47,6 +47,9 @@ char userName[] = "legoses";
 char macAddr[][13] = {
   // {"8E5CDAEE1697"}, Example mac
   // {"0504A4C587AF"}  Example mac
+  {"F412FA66EB00"}, //Eric's mac
+  //{"f412fa815118"}, //Kyle's mac
+  {"f412fa66e9ec"} // Paul's mac
 };
 
 const int SCREEN_REFRESH = 2500;
@@ -68,13 +71,16 @@ int numCurPeer = 0;
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 long timeSinceLastLogo = 0;
 
+
 //Hold info to send and recieve data
 typedef struct struct_message {
   int8_t rssi;
+  char userName[32];
 } struct_message;
 
-struct_message sendMessage;
+//struct_message sendMessage;
 struct_message recvMessage;
+
 
 esp_now_peer_info_t peerInfo;
 int lineCount = 0;
@@ -274,6 +280,7 @@ void setup() {
   Heltec.display->setFont(ArialMT_Plain_10);
  
   displayUsername(userName);
+  
   displayLogos();
 
 #else
@@ -295,6 +302,7 @@ void setup() {
 #endif
 
   Serial.print("setup() running on core ");
+  //memcpy(sendMessage.userName, userName, 32);
   Serial.println(xPortGetCoreID());
 
   init_wifi();
@@ -344,7 +352,8 @@ void setup() {
 
 void loop() {
   //Setting first value to NULL will send data to all registered peers
-  esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
+  //esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
+  esp_err_t result = esp_now_send(NULL, (uint8_t*)&userName, sizeof(userName));
   if(result == ESP_OK)
   {
     Serial.println("Sent With Success");
@@ -354,7 +363,9 @@ void loop() {
     Serial.println("Error Sending Data");
   }
   delay(2000);
+  Serial.printf("My username: %s\n", userName);
 }
+
 
 //Remove peers who haven't been seen in 10 seconds
 void removeItem(int item)
@@ -414,15 +425,12 @@ void loadList(int8_t rssiArr[], char sortUserNameList[][32])
     rssiArr[i] = rssi[i];
     memcpy(sortUserNameList[i], userNameList[i], 31);
   }
-
 }
 
 
 //Simple bubble sort
 void sortList(int8_t rssiArray[], char sortUserNameList[][32])
 {
-  
-
   if(numCurPeer > 1)
   {
     for(int i = 0; i < numCurPeer; i++)
@@ -491,7 +499,7 @@ void handleDisplay(void* pvParameters)
         {
           for(int i = 0; i < numCurPeer; i++)
           {
-            Serial.println(i);
+            Serial.printf("Username: %s\n", sortUserNameList[i]);
             snprintf(tmpRssi, 5, "%d", rssiArr[i]);
             Heltec.display->drawString(0, yCursorPos, sortUserNameList[i]);
             Heltec.display->drawString(80, yCursorPos, tmpRssi);
