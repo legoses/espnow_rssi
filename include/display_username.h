@@ -4,5 +4,6 @@
 void appendLen(char userName[]);
 
 void displayUsername(char *userName);
+void clearScreen(void);
 
 #endif

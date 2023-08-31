@@ -37,7 +37,7 @@ bool encryptESPNOW = false;
 
 //Each of these must contain a 16 byte string
 static const char *pmk = "<PMK here>";
-static const char *lmk = "<LMK here";
+static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
 char userName[] = "legoses";
@@ -47,8 +47,8 @@ char userName[] = "legoses";
 char macAddr[][13] = {
   // {"8E5CDAEE1697"}, Example mac
   // {"0504A4C587AF"}  Example mac
-  {"F412FA66EB00"}, //Eric's mac
-  //{"f412fa815118"}, //Kyle's mac
+  {"f412fa815118"}, //Eric's mac
+  //{"F412FA66EB00"}, //Kyle's mac
   {"f412fa66e9ec"} // Paul's mac
 };
 
@@ -457,8 +457,13 @@ void sortList(int8_t rssiArray[], char sortUserNameList[][32])
 
 void checkLogoTime()
 {
-  if(millis() - timeSinceLastLogo > 25000)
+  //if(millis() - timeSinceLastLogo > 25000)
+  if(millis() - timeSinceLastLogo > 2500)
   {
+    //Heltec.display->drawRect(0, 0, 128, 64);
+    //Heltec.display->setColor(BLACK);
+    clearScreen();
+
     displayLogos();
     timeSinceLastLogo = millis();
   }
