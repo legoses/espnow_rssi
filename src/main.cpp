@@ -47,9 +47,10 @@ char userName[] = "legoses";
 char macAddr[][13] = {
   // {"8E5CDAEE1697"}, Example mac
   // {"0504A4C587AF"}  Example mac
-  {"f412fa815118"}, //Eric's mac
+  //{"f412fa815118"}, //Eric's mac
   //{"F412FA66EB00"}, //Kyle's mac
-  {"f412fa66e9ec"} // Paul's mac
+  //{"f412fa66e9ec"} // Paul's mac
+  {"7CDFA1E403AC"}, //non heltec
 };
 
 const int SCREEN_REFRESH = 2500;
@@ -104,7 +105,7 @@ void copyMac(const uint8_t *mac, int j)
   }
 }
 
-
+/*
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
   char buf[18];
@@ -193,7 +194,7 @@ void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
     xSemaphoreGive(xMutex);
   }
 }
-
+*/
 
 void init_wifi()
 {
@@ -339,7 +340,7 @@ void setup() {
     , 0
   );
 
-
+/*
   //Register funciton to be called every time an esp-now packet is revieved
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
@@ -347,6 +348,7 @@ void setup() {
   //Set adaptor to promiscuous mode in order to recieve connection info, and register callback function
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_rx_cb(promiscuousRecv);
+*/
 }
 
 
