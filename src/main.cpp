@@ -9,6 +9,7 @@
 #include <Arduino.h>
 #include <badge_images.h>
 #include <display_username.h>
+#include <listener.h>
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -270,7 +271,7 @@ void setup() {
   Serial.begin(115200);
 
 #ifdef USE_MUTEX
-  xMutex = xSemaphoreCreateMutex();
+  //xMutex = xSemaphoreCreateMutex();
 #endif
 
   //Init display
@@ -340,15 +341,17 @@ void setup() {
     , 0
   );
 
-/*
+  PeerListener listen;
+
+
   //Register funciton to be called every time an esp-now packet is revieved
-  esp_now_register_recv_cb(OnDataRecv);
+  esp_now_register_recv_cb(listen.OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
 
   //Set adaptor to promiscuous mode in order to recieve connection info, and register callback function
   esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_rx_cb(promiscuousRecv);
-*/
+  esp_wifi_set_promiscuous_rx_cb(listen.promiscuousRecv);
+
 }
 
 

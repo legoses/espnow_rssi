@@ -1,20 +1,51 @@
 #include <listener.h>
-#include "esp_now.h"
+#include <Arduino.h>
+
+
+PeerInfo::PeerInfo()
+{
+    
+    this->numCurPeer = 0;
+    this->xMutex = xSemaphoreCreateMutex();
+}
+
+
+void PeerInfo::setNumCurPeer(int num)
+{
+    this->numCurPeer += num;
+}
+
+
+int PeerInfo::getNumCurPeer()
+{
+    return this->numCurPeer;
+}
 
 
 void PeerListener::promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 {
     //Get connection info
-    if(xMutex != NULL)
+    if(PeerInfo::xMutex != NULL)
     {
-        if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+        if(xSemaphoreTake(PeerInfo::xMutex, MAX_DELAY) == pdTRUE)
         {
             wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
-            recvMessage.rssi = rssiInfo->rx_ctrl.rssi;
+            //recvMessage.rssi = rssiInfo->rx_ctrl.rssi;
+            this->tempRssi = rssiInfo->rx_ctrl.rssi;
         }
-        xSemaphoreGive(xMutex);
+        xSemaphoreGive(PeerInfo::xMutex);
     }
 }
+
+
+void PeerListener::copyMac(const uint8_t *mac, int j)
+{
+  for(int i = 0; i < 4; i++)
+  {
+    incomingMac[j][i] = mac[i];
+  }
+}
+
 
 
 void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
@@ -37,11 +68,11 @@ void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, i
     Serial.println(*incomingData);
     Serial.println();
     Serial.println();
-    if(xMutex != NULL)
+    if(PeerInfo::xMutex != NULL)
     {
-        if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+        if(xSemaphoreTake(PeerInfo::xMutex, MAX_DELAY) == pdTRUE)
         {
-            int8_t tempRssi = recvMessage.rssi;
+            //int8_t tempRssi = recvMessage.rssi;
 
             for(int i = 0; i < 4; i++)
             {
@@ -54,13 +85,13 @@ void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, i
             for(int i = 0; i <  ORDERED_LIST_LEN; i++)
             {
                 //Init first peer
-                if(numCurPeer == 0)
+                if(PeerInfo::getNumCurPeer() == 0)
                 {
                     copyMac(mac, 0);
-                    rssi[0] = tempRssi;
-                    memcpy(userNameList[0], incomingData, 31);
+                    rssi[0] = this->tempRssi;
+                    memcpy(PeerInfo::userNameList[0], incomingData, 31);
                     lastSeen[0] = millis();
-                    numCurPeer++;
+                    PeerInfo::setNumCurPeer(1);
                     break;
                 }
                 //update peers
@@ -68,21 +99,21 @@ void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, i
                 {
                     Serial.print("updating ");
                     Serial.println(i);
-                    rssi[i] = tempRssi;
-                    memcpy(userNameList[i], incomingData, 31);
-                    lastSeen[i] = millis();
+                    PeerInfo::rssi[i] = this->tempRssi;
+                    memcpy(PeerInfo::userNameList[i], incomingData, 31);
+                    PeerInfo::lastSeen[i] = millis();
                     break;
                 }
                 //add new peer
-                else if(i > numCurPeer-1)
+                else if(i > PeerInfo::getNumCurPeer() - 1)
                 {
                     Serial.print("new peer ");
                     Serial.println(i);
                     copyMac(mac, i);
-                    rssi[i] = tempRssi;
-                    memcpy(userNameList[i], incomingData, 31);
-                    lastSeen[i] = millis();
-                    numCurPeer++;
+                    PeerInfo::rssi[i] = this->tempRssi;
+                    memcpy(PeerInfo::userNameList[i], incomingData, 31);
+                    PeerInfo::lastSeen[i] = millis();
+                    PeerInfo::setNumCurPeer(1);
                     break;
                 }
             }
@@ -91,18 +122,19 @@ void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, i
     }
 }
 
-
+/*
 void PeerListener::begin(char macAddr[][13], int peers)
 {
+    
     //Register funciton to be called every time an esp-now packet is revieved
-    esp_now_register_recv_cb(OnDataRecv);
-    esp_now_register_send_cb(OnDataSent);
+    esp_now_register_recv_cb(PeerListener::OnDataRecv);
+    //esp_now_register_send_cb(OnDataSent);
 
     //Set adaptor to promiscuous mode in order to recieve connection info, and register callback function
     esp_wifi_set_promiscuous(true);
-    esp_wifi_set_promiscuous_rx_cb(promiscuousRecv);
+    esp_wifi_set_promiscuous_rx_cb(*PeerListener::promiscuousRecv);
 }
-/*
+
 class PeerListener : public PeerInfo
 {
     
