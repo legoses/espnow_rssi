@@ -7,7 +7,7 @@
 class PeerInfo
 {
     
-    static int numCurPeer;
+    int numCurPeer;
     
 
 
@@ -32,14 +32,13 @@ class PeerInfo
 
 class PeerListener : public PeerInfo
 {
-    void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len);
-    void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type);
     void copyMac(const uint8_t *mac, int j);
     int8_t tempRssi;
 
     public:
-        
         void begin(char macAddr[][13], int peers);
+        void dataRecv(const uint8_t *mac, const uint8_t *incomingData);
+        void promiscuousRecv(int8_t packetRssi);
 };
 
 #endif

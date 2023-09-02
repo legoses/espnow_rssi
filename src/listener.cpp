@@ -12,28 +12,26 @@ PeerInfo::PeerInfo()
 
 void PeerInfo::setNumCurPeer(int num)
 {
-    this->numCurPeer += num;
+    numCurPeer += num;
 }
 
 
 int PeerInfo::getNumCurPeer()
 {
-    return this->numCurPeer;
+    return numCurPeer;
 }
 
 
-void PeerListener::promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
+void PeerListener::promiscuousRecv(int8_t packetRssi)
 {
     //Get connection info
-    if(PeerInfo::xMutex != NULL)
+    if(xMutex != NULL)
     {
-        if(xSemaphoreTake(PeerInfo::xMutex, MAX_DELAY) == pdTRUE)
+        if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
         {
-            wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
-            //recvMessage.rssi = rssiInfo->rx_ctrl.rssi;
-            this->tempRssi = rssiInfo->rx_ctrl.rssi;
+            this->tempRssi = packetRssi;
         }
-        xSemaphoreGive(PeerInfo::xMutex);
+        xSemaphoreGive(xMutex);
     }
 }
 
@@ -48,7 +46,7 @@ void PeerListener::copyMac(const uint8_t *mac, int j)
 
 
 
-void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+void PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
 {
     char buf[18];
     
@@ -68,9 +66,9 @@ void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, i
     Serial.println(*incomingData);
     Serial.println();
     Serial.println();
-    if(PeerInfo::xMutex != NULL)
+    if(xMutex != NULL)
     {
-        if(xSemaphoreTake(PeerInfo::xMutex, MAX_DELAY) == pdTRUE)
+        if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
         {
             //int8_t tempRssi = recvMessage.rssi;
 
@@ -85,13 +83,13 @@ void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, i
             for(int i = 0; i <  ORDERED_LIST_LEN; i++)
             {
                 //Init first peer
-                if(PeerInfo::getNumCurPeer() == 0)
+                if(getNumCurPeer() == 0)
                 {
                     copyMac(mac, 0);
                     rssi[0] = this->tempRssi;
-                    memcpy(PeerInfo::userNameList[0], incomingData, 31);
+                    memcpy(userNameList[0], incomingData, 31);
                     lastSeen[0] = millis();
-                    PeerInfo::setNumCurPeer(1);
+                    setNumCurPeer(1);
                     break;
                 }
                 //update peers
@@ -99,21 +97,21 @@ void PeerListener::OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, i
                 {
                     Serial.print("updating ");
                     Serial.println(i);
-                    PeerInfo::rssi[i] = this->tempRssi;
-                    memcpy(PeerInfo::userNameList[i], incomingData, 31);
-                    PeerInfo::lastSeen[i] = millis();
+                    rssi[i] = this->tempRssi;
+                    memcpy(userNameList[i], incomingData, 31);
+                    lastSeen[i] = millis();
                     break;
                 }
                 //add new peer
-                else if(i > PeerInfo::getNumCurPeer() - 1)
+                else if(i > getNumCurPeer() - 1)
                 {
                     Serial.print("new peer ");
                     Serial.println(i);
                     copyMac(mac, i);
-                    PeerInfo::rssi[i] = this->tempRssi;
-                    memcpy(PeerInfo::userNameList[i], incomingData, 31);
-                    PeerInfo::lastSeen[i] = millis();
-                    PeerInfo::setNumCurPeer(1);
+                    rssi[i] = this->tempRssi;
+                    memcpy(userNameList[i], incomingData, 31);
+                    lastSeen[i] = millis();
+                    setNumCurPeer(1);
                     break;
                 }
             }

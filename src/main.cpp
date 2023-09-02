@@ -6,6 +6,13 @@
   received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>. 
 */
 
+/*
+  TODO:
+  Currently the program builds but crashed while running. I believe this is because
+  I have moved much of the variable info storage into the peerinfo class.
+  The functions that handle the display have not been updated to use the peerinfo class, as they will be moved into their own class later.
+*/
+
 #include <Arduino.h>
 #include <badge_images.h>
 #include <display_username.h>
@@ -72,6 +79,7 @@ int numCurPeer = 0;
 
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 long timeSinceLastLogo = 0;
+PeerListener listener;
 
 
 //Hold info to send and recieve data
@@ -106,96 +114,6 @@ void copyMac(const uint8_t *mac, int j)
   }
 }
 
-/*
-void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
-{
-  char buf[18];
-  Serial.println("recv Data");
-  Serial.print("Recieved MAC: ");
-  snprintf(buf, sizeof(buf), "%02x:%02x:%02x::%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  for(int i = 0; i < 4; i++)
-  {
-    Serial.print(mac[i]);
-    Serial.print(" ");
-  }
-  //Debug
-  Serial.println();
-  Serial.println(buf);
-  Serial.print("Incoming Data: ");
-  Serial.println(*incomingData);
-  Serial.println();
-  Serial.println();
-  if(xMutex != NULL)
-  {
-    if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
-    {
-      int8_t tempRssi = recvMessage.rssi;
-
-      for(int i = 0; i < 4; i++)
-      {
-      Serial.print(mac[i]);
-      }
-
-      Serial.println();
-      Serial.println((char*)incomingData);
-
-      for(int i = 0; i <  ORDERED_LIST_LEN; i++)
-      {
-        //Init first peer
-        if(numCurPeer == 0)
-        {
-          copyMac(mac, 0);
-          rssi[0] = tempRssi;
-          memcpy(userNameList[0], incomingData, 31);
-          lastSeen[0] = millis();
-          numCurPeer++;
-          break;
-        }
-        //update peers
-        else if(memcmp(mac, incomingMac[i], 4) == 0)
-        {
-          Serial.print("updating ");
-          Serial.println(i);
-          rssi[i] = tempRssi;
-          memcpy(userNameList[i], incomingData, 31);
-          lastSeen[i] = millis();
-          break;
-        }
-        //add new peer
-        else if(i > numCurPeer-1)
-        {
-          Serial.print("new peer ");
-          Serial.println(i);
-          copyMac(mac, i);
-          rssi[i] = tempRssi;
-          memcpy(userNameList[i], incomingData, 31);
-          lastSeen[i] = millis();
-          numCurPeer++;
-          break;
-        }
-
-      }
-    }
-    xSemaphoreGive(xMutex);
-  }
-}
-
-
-void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
-{
-  //Get connection info
-  if(xMutex != NULL)
-  {
-    if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
-    {
-      wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
-      recvMessage.rssi = rssiInfo->rx_ctrl.rssi;
-    }
-    
-    xSemaphoreGive(xMutex);
-  }
-}
-*/
 
 void init_wifi()
 {
@@ -263,16 +181,25 @@ void displayLogos()
 }
 
 
+void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
+{
+  listener.dataRecv(mac, incomingData);
+}
+
+void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
+{
+  wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
+  int8_t packetRssi = rssiInfo->rx_ctrl.rssi;
+  listener.promiscuousRecv(packetRssi);
+}
+
+
 void handleDisplay(void *pvParameters);
 void checkForDeadPeers(void *pvParameters);
 
 
 void setup() {
   Serial.begin(115200);
-
-#ifdef USE_MUTEX
-  //xMutex = xSemaphoreCreateMutex();
-#endif
 
   //Init display
 #ifdef heltec_wifi_kit_32_V3
@@ -345,12 +272,12 @@ void setup() {
 
 
   //Register funciton to be called every time an esp-now packet is revieved
-  esp_now_register_recv_cb(listen.OnDataRecv);
+  esp_now_register_recv_cb(onDataRecv);
   esp_now_register_send_cb(OnDataSent);
 
   //Set adaptor to promiscuous mode in order to recieve connection info, and register callback function
   esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_rx_cb(listen.promiscuousRecv);
+  esp_wifi_set_promiscuous_rx_cb(promiscuousRecv);
 
 }
 
