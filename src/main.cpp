@@ -67,15 +67,6 @@ const int SCREEN_REFRESH = 2500;
 //Hold mac address once parsed
 uint8_t broadcastAddress[20][6];
 
-//const int MAX_DELAY = 1000;
-
-//const int listener.getOrderedListLen() = 25;
-
-//uint8_t incomingMac[listener.getOrderedListLen()][5];
-//int8_t rssi[listener.getOrderedListLen()];
-//char userNameList[listener.getOrderedListLen()][32];
-//long lastSeen[listener.getOrderedListLen()];
-
 int numCurPeer = 0;
 
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
@@ -106,9 +97,6 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
   Serial.print("\r\nLast packet send status: ");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Failed");
 }
-
-
-
 
 
 void init_wifi()
