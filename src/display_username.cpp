@@ -2,7 +2,6 @@
 #include "heltec.h"
 
 
-
 void appendLen(char userName[])
 {
     char dots[] = "...";
@@ -47,18 +46,6 @@ void displayUsername(char *userName)
 }
 
 void clearScreen(void) {
-  //Heltec.display->setColor(BLACK);
-  //Heltec.display->fillRect(0, 0, 150, 64);
-  //Heltec.display->clear();
-  //Heltec.display->display();
-  //Heltec.display->setColor(WHITE);
-  //Heltec.display->resetDisplay();
 
-  Heltec.display->screenRotate(ANGLE_90_DEGREE);
-  memset(Heltec.display->buffer, 0, 1024);
-  Heltec.display->display();
-  Heltec.display->screenRotate(ANGLE_0_DEGREE);
-  memset(Heltec.display->buffer, 0, 1024);
-  //Heltec.display->clear();
-  Heltec.display->display();
+  Heltec.display->clear();
 }

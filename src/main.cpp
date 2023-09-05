@@ -380,7 +380,7 @@ void sortList(int8_t rssiArray[], char sortUserNameList[][32])
 void checkLogoTime()
 {
   //if(millis() - timeSinceLastLogo > 25000)
-  if(millis() - timeSinceLastLogo > 2500)
+  if(millis() - timeSinceLastLogo > 25000)
   {
     //Heltec.display->drawRect(0, 0, 128, 64);
     //Heltec.display->setColor(BLACK);
@@ -420,13 +420,13 @@ void handleDisplay(void* pvParameters)
         int yCursorPos = 10;
         char tmpRssi[6];
         
-        if(numCurPeer == 0)
+        if(listener.getNumCurPeer() == 0)
         {
           Heltec.display->drawString(0, yCursorPos, "You Are Alone.");
         }
         else
         {
-          for(int i = 0; i < numCurPeer; i++)
+          for(int i = 0; i < listener.getNumCurPeer(); i++)
           {
             Serial.printf("Username: %s\n", sortUserNameList[i]);
             snprintf(tmpRssi, 5, "%d", rssiArr[i]);
@@ -437,18 +437,18 @@ void handleDisplay(void* pvParameters)
         }
         Heltec.display->display();
 
-//Display peers on cc1101
+//Display peers on ssd1306
 #else
         display.clearDisplay();
         display.setCursor(0, 10);
 
-        if(numCurPeer == 0)
+        if(listener.getNumCurPeer() == 0)
         {
           display.println("You Are Alone.");
         }
         else
         {
-          for(int i = 0; i < numCurPeer; i++)
+          for(int i = 0; i < listener.getNumCurPeer(); i++)
           {
             display.print(sortUserNameList[i]);
             display.print("   ");
