@@ -39,6 +39,7 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
+PeerListener listener;
 
 //Change to true to enable encryption
 bool encryptESPNOW = false;
@@ -66,20 +67,20 @@ const int SCREEN_REFRESH = 2500;
 //Hold mac address once parsed
 uint8_t broadcastAddress[20][6];
 
-const int MAX_DELAY = 1000;
+//const int MAX_DELAY = 1000;
 
-const int ORDERED_LIST_LEN = 25;
+//const int listener.getOrderedListLen() = 25;
 
-uint8_t incomingMac[ORDERED_LIST_LEN][5];
-int8_t rssi[ORDERED_LIST_LEN];
-char userNameList[ORDERED_LIST_LEN][32];
-long lastSeen[ORDERED_LIST_LEN];
+//uint8_t incomingMac[listener.getOrderedListLen()][5];
+//int8_t rssi[listener.getOrderedListLen()];
+//char userNameList[listener.getOrderedListLen()][32];
+//long lastSeen[listener.getOrderedListLen()];
 
 int numCurPeer = 0;
 
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 long timeSinceLastLogo = 0;
-PeerListener listener;
+
 
 
 //Hold info to send and recieve data
@@ -99,6 +100,7 @@ int file = 0;
 //Create mutex to lock objects and prevent race conditions
 SemaphoreHandle_t xMutex = NULL;
 
+
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
   Serial.print("\r\nLast packet send status: ");
@@ -106,13 +108,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 }
 
 
-void copyMac(const uint8_t *mac, int j)
-{
-  for(int i = 0; i < 4; i++)
-  {
-    incomingMac[j][i] = mac[i];
-  }
-}
+
 
 
 void init_wifi()
@@ -183,7 +179,8 @@ void displayLogos()
 
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-  listener.numCurPeer += listener.dataRecv(mac, incomingData);
+  Serial.println("DATA RECIEVED");
+  listener.dataRecv(mac, incomingData);
 }
 
 void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
@@ -200,6 +197,7 @@ void checkForDeadPeers(void *pvParameters);
 
 void setup() {
   Serial.begin(115200);
+  xMutex = xSemaphoreCreateMutex();
 
   //Init display
 #ifdef heltec_wifi_kit_32_V3
@@ -272,7 +270,11 @@ void setup() {
 
 
   //Register funciton to be called every time an esp-now packet is revieved
-  esp_now_register_recv_cb(onDataRecv);
+  if(esp_now_register_recv_cb(onDataRecv) != ESP_OK)
+  {
+    Serial.println("ERRORERRORERROERROORERRORERROROERRORO");
+    return;
+  }
   esp_now_register_send_cb(OnDataSent);
 
   //Set adaptor to promiscuous mode in order to recieve connection info, and register callback function
@@ -302,14 +304,14 @@ void loop() {
 //Remove peers who haven't been seen in 10 seconds
 void removeItem(int item)
 {
-  for(int i = item; i < ORDERED_LIST_LEN-1; i++)
+  for(int i = item; i < listener.getOrderedListLen()-1; i++)
   {
     Serial.println("removing");
     Serial.println(i);
-    memcpy(incomingMac[i], incomingMac[i+1], 4);
-    rssi[i] = rssi[i+1];
-    memcpy(userNameList[i], userNameList[i+1], 31);
-    lastSeen[i] = lastSeen[i+1];
+    memcpy(listener.incomingMac[i], listener.incomingMac[i+1], 4);
+    listener.rssi[i] = listener.rssi[i+1];
+    memcpy(listener.userNameList[i], listener.userNameList[i+1], 31);
+    listener.lastSeen[i] = listener.lastSeen[i+1];
     
   }
 }
@@ -326,11 +328,11 @@ void checkForDeadPeers(void* pvParameters)
     for(int i = 0; i < numCurPeer; i++)
     {
       Serial.println(i);
-      if(millis() - lastSeen[i] > 10000)
+      if(millis() - listener.lastSeen[i] > 10000)
       {
           if(xMutex != NULL)
           {
-            if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+            if(xSemaphoreTake(xMutex, listener.getMaxDelay()) == pdTRUE)
             {
               removeItem(i);
               numCurPeer--;
@@ -349,13 +351,13 @@ void checkForDeadPeers(void* pvParameters)
 void loadList(int8_t rssiArr[], char sortUserNameList[][32])
 {
   Serial.print("peers ");
-  Serial.println(numCurPeer);
+  Serial.println(listener.getNumCurPeer());
 
-  for(int i = 0; i < numCurPeer; i++)
+  for(int i = 0; i < listener.getNumCurPeer(); i++)
   {
     Serial.println(i);
-    rssiArr[i] = rssi[i];
-    memcpy(sortUserNameList[i], userNameList[i], 31);
+    rssiArr[i] = listener.rssi[i];
+    memcpy(sortUserNameList[i], listener.userNameList[i], 31);
   }
 }
 
@@ -363,9 +365,9 @@ void loadList(int8_t rssiArr[], char sortUserNameList[][32])
 //Simple bubble sort
 void sortList(int8_t rssiArray[], char sortUserNameList[][32])
 {
-  if(numCurPeer > 1)
+  if(listener.getNumCurPeer() > 1)
   {
-    for(int i = 0; i < numCurPeer; i++)
+    for(int i = 0; i < listener.getNumCurPeer(); i++)
     {
       int8_t rssiPlaceHolder;
       char namePlaceHolder[32];
@@ -406,8 +408,8 @@ void checkLogoTime()
 void handleDisplay(void* pvParameters)
 {
   (void)pvParameters;
-  int8_t rssiArr[ORDERED_LIST_LEN];
-  char sortUserNameList[ORDERED_LIST_LEN][32];
+  int8_t rssiArr[listener.getOrderedListLen()];
+  char sortUserNameList[listener.getOrderedListLen()][32];
   
   while(true)
   {
@@ -416,10 +418,12 @@ void handleDisplay(void* pvParameters)
       delay(SCREEN_REFRESH);
       checkLogoTime();
 
-      if(xSemaphoreTake(xMutex, MAX_DELAY) == pdTRUE)
+      if(xSemaphoreTake(xMutex, listener.getMaxDelay()) == pdTRUE)
       {
         //Load list into local array and sort
+        Serial.println("Loading arrays...");
         loadList(rssiArr, sortUserNameList);
+        Serial.println("Sorting arrays...");
         sortList(rssiArr, sortUserNameList);
 
 //Display peers on heltec

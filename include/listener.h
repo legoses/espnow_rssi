@@ -5,31 +5,39 @@
 #include "esp_wifi.h"
 
 class PeerInfo
-{   
-    public:
-    PeerInfo();
-
-    SemaphoreHandle_t xMutex = NULL;
-    static int numCurPeer;
-
-    int getNumCurPeer();
-    void setNumCurPeer(int num);
-    void initNumCurPeer();
-    
+{
     static const int MAX_DELAY = 1000;
     static const int ORDERED_LIST_LEN = 25;
 
-    uint8_t incomingMac[ORDERED_LIST_LEN][5];
-    int8_t rssi[ORDERED_LIST_LEN];
-    char userNameList[ORDERED_LIST_LEN][32];
-    long lastSeen[ORDERED_LIST_LEN];
+    static int numCurPeer;
+    
+
+    public:
+        PeerInfo();
+        static uint8_t incomingMac[ORDERED_LIST_LEN][5];
+        static int8_t rssi[ORDERED_LIST_LEN];
+        static char userNameList[ORDERED_LIST_LEN][32];
+        static long lastSeen[ORDERED_LIST_LEN];
+        
+        SemaphoreHandle_t xMutex = NULL;
+
+        int getNumCurPeer();
+        void addPeer();
+        void removePeer();
+
+        void copyMac(const uint8_t *mac, int j);
+        const int getMaxDelay();
+        const int getOrderedListLen();
+        
+        
+
+        
     
 };
 
 
 class PeerListener : public PeerInfo
 {
-    void copyMac(const uint8_t *mac, int j);
     int8_t tempRssi;
 
     public:
