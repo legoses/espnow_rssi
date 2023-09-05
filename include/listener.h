@@ -5,19 +5,16 @@
 #include "esp_wifi.h"
 
 class PeerInfo
-{
-    
-    int numCurPeer;
-    
-
-
+{   
     public:
     PeerInfo();
 
     SemaphoreHandle_t xMutex = NULL;
+    static int numCurPeer;
 
     int getNumCurPeer();
     void setNumCurPeer(int num);
+    void initNumCurPeer();
     
     static const int MAX_DELAY = 1000;
     static const int ORDERED_LIST_LEN = 25;
@@ -37,8 +34,9 @@ class PeerListener : public PeerInfo
 
     public:
         void begin(char macAddr[][13], int peers);
-        void dataRecv(const uint8_t *mac, const uint8_t *incomingData);
+        int dataRecv(const uint8_t *mac, const uint8_t *incomingData);
         void promiscuousRecv(int8_t packetRssi);
+        static void testFunct();
 };
 
 #endif

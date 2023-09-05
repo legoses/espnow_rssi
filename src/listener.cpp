@@ -1,26 +1,12 @@
 #include <listener.h>
 #include <Arduino.h>
 
+int PeerInfo::numCurPeer = 0;
 
 PeerInfo::PeerInfo()
 {
-    
-    this->numCurPeer = 0;
     this->xMutex = xSemaphoreCreateMutex();
 }
-
-
-void PeerInfo::setNumCurPeer(int num)
-{
-    numCurPeer += num;
-}
-
-
-int PeerInfo::getNumCurPeer()
-{
-    return numCurPeer;
-}
-
 
 void PeerListener::promiscuousRecv(int8_t packetRssi)
 {
@@ -46,7 +32,7 @@ void PeerListener::copyMac(const uint8_t *mac, int j)
 
 
 
-void PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
+int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
 {
     char buf[18];
     
@@ -89,8 +75,10 @@ void PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                     rssi[0] = this->tempRssi;
                     memcpy(userNameList[0], incomingData, 31);
                     lastSeen[0] = millis();
-                    setNumCurPeer(1);
-                    break;
+                    //setNumCurPeer(1);
+                    //break;
+                    xSemaphoreGive(xMutex);
+                    return 1;
                 }
                 //update peers
                 else if(memcmp(mac, incomingMac[i], 4) == 0)
@@ -111,13 +99,16 @@ void PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                     rssi[i] = this->tempRssi;
                     memcpy(userNameList[i], incomingData, 31);
                     lastSeen[i] = millis();
-                    setNumCurPeer(1);
-                    break;
+                    //setNumCurPeer(1);
+                    //break;
+                    xSemaphoreGive(xMutex);
+                    return 1;
                 }
             }
         }
         xSemaphoreGive(xMutex);
     }
+    return 0;
 }
 
 /*

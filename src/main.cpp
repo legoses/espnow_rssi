@@ -183,7 +183,7 @@ void displayLogos()
 
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-  listener.dataRecv(mac, incomingData);
+  listener.numCurPeer += listener.dataRecv(mac, incomingData);
 }
 
 void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
