@@ -8,8 +8,6 @@
 
 /*
   TODO:
-  Currently the program builds but crashed while running. I believe this is because
-  I have moved much of the variable info storage into the peerinfo class.
   The functions that handle the display have not been updated to use the peerinfo class, as they will be moved into their own class later.
 */
 
