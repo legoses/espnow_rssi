@@ -286,22 +286,6 @@ void loop() {
   Serial.printf("My username: %s\n", userName);
 }
 
-/*
-//Remove peers who haven't been seen in 10 seconds
-void removeItem(int item)
-{
-  for(int i = item; i < listener.getOrderedListLen()-1; i++)
-  {
-    Serial.println("removing");
-    Serial.println(i);
-    memcpy(listener.incomingMac[i], listener.incomingMac[i+1], 4);
-    listener.rssi[i] = listener.rssi[i+1];
-    memcpy(listener.userNameList[i], listener.userNameList[i+1], 31);
-    listener.lastSeen[i] = listener.lastSeen[i+1];
-    
-  }
-}
-*/
 
 void checkForDeadPeers(void* pvParameters)
 {
