@@ -392,7 +392,13 @@ void handleDisplay(void* pvParameters)
             char *tempUserName = displayInfo.getUserName(i);
             Serial.printf("Username: %s\n", tempUserName);
             snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(i));
-            Heltec.display->drawString(0, yCursorPos, tempUserName);
+
+            char placeNum[10];
+            snprintf(placeNum, 10, "%i. ", i+1);
+            Serial.println(placeNum);
+
+            Heltec.display->drawString(0, yCursorPos, placeNum);
+            Heltec.display->drawString(15, yCursorPos, tempUserName);
             Heltec.display->drawString(80, yCursorPos, tmpRssi);
             yCursorPos+=10;
           }
