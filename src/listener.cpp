@@ -16,6 +16,69 @@ void PeerListener::promiscuousRecv(int8_t packetRssi)
 }
 
 
+void PeerListener::updatePeers()
+{
+    for(int i = 0; i < getNumCurPeer(); i++)
+    {
+        this->sortedRssi[i] = this->rssi[i];
+        memcpy(sortedUserNameList[i], userNameList[i], 32);
+        Serial.printf("Loaded user name: %s\n", sortedUserNameList[i]);
+    }
+}
+
+
+int8_t PeerListener::getRssi(int i)
+{
+    Serial.printf("Returning %i\n", i);
+    return this->sortedRssi[i];
+}
+
+char *PeerListener::getUserName(int i)
+{
+    for(int i = 0; i < 10; i++)
+    {
+        Serial.printf("%s is at %i\n", sortedUserNameList[i], i);
+    }
+    return this->sortedUserNameList[i];
+}
+
+
+void PeerListener::sortPeers()
+{
+    int peers = getNumCurPeer();
+    if(peers > 1)
+    {
+        bool swap = false;
+        for(int i = 0; i < peers; i++)
+        {
+            for(int j = 0; j < peers - i; j++)
+            {
+                int8_t rssiPlaceHolder;
+                char namePlaceHolder[32];
+
+                if((this->sortedRssi[i] < this->sortedRssi[i+1]))
+                {
+                    rssiPlaceHolder = this->sortedRssi[i];
+                    memcpy(namePlaceHolder, this->sortedUserNameList[i], 31);
+
+                    this->sortedRssi[i] = this->sortedRssi[i+1];
+                    memcpy(this->sortedUserNameList[i], this->sortedUserNameList[i+1], 31);
+
+                    this->sortedRssi[i+1] = rssiPlaceHolder;
+                    memcpy(this->sortedUserNameList[i+1], namePlaceHolder, 31);
+                    swap = true;
+                }
+
+                if(swap == false)
+                {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
 int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
 {
     char buf[18];
@@ -80,7 +143,7 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                     Serial.println(i);
                     copyMac(mac, i);
                     rssi[i] = this->tempRssi;
-                    memcpy(userNameList[i], incomingData, 31);
+                    memcpy(userNameList[i], (char*)incomingData, 31);
                     lastSeen[i] = millis();
                     addPeer();
                     xSemaphoreGive(xMutex);

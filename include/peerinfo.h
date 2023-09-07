@@ -5,14 +5,13 @@
 
 class PeerInfo
 {
-    static const int MAX_DELAY = 1000;
-    static const int ORDERED_LIST_LEN = 25;
-
     static int numCurPeer;
     
-
     public:
         PeerInfo();
+        static const int MAX_DELAY = 1000;
+        static const int ORDERED_LIST_LEN = 25;
+
         static uint8_t incomingMac[ORDERED_LIST_LEN][5];
         static int8_t rssi[ORDERED_LIST_LEN];
         static char userNameList[ORDERED_LIST_LEN][32];

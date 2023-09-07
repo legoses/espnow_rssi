@@ -8,7 +8,7 @@
 
 /*
   TODO:
-  The functions that handle the display have not been updated to use the peerinfo class, as they will be moved into their own class later.
+  Fix dataRecv adding new peers where it wants to instead of where I am telling it to
 */
 
 #include <Arduino.h>
@@ -348,40 +348,10 @@ void loadList(int8_t rssiArr[], char sortUserNameList[][32])
 }
 
 
-//Simple bubble sort
-void sortList(int8_t rssiArray[], char sortUserNameList[][32])
-{
-  if(listener.getNumCurPeer() > 1)
-  {
-    for(int i = 0; i < listener.getNumCurPeer(); i++)
-    {
-      int8_t rssiPlaceHolder;
-      char namePlaceHolder[32];
-
-      if((rssiArray[i] < rssiArray[i+1]))
-      {
-        rssiPlaceHolder = rssiArray[i];
-        memcpy(namePlaceHolder, sortUserNameList[i], 31);
-
-        rssiArray[i] = rssiArray[i+1];
-        memcpy(sortUserNameList[i], sortUserNameList[i+1], 31);
-
-        rssiArray[i+1] = rssiPlaceHolder;
-        memcpy(sortUserNameList[i+1], namePlaceHolder, 31);
-        i = 0;
-      }
-    }
-  }
-}
-
-
 void checkLogoTime()
 {
-  //if(millis() - timeSinceLastLogo > 25000)
   if(millis() - timeSinceLastLogo > 25000)
   {
-    //Heltec.display->drawRect(0, 0, 128, 64);
-    //Heltec.display->setColor(BLACK);
     clearScreen();
 
     displayLogos();
@@ -394,8 +364,6 @@ void checkLogoTime()
 void handleDisplay(void* pvParameters)
 {
   (void)pvParameters;
-  int8_t rssiArr[listener.getOrderedListLen()];
-  char sortUserNameList[listener.getOrderedListLen()][32];
   
   while(true)
   {
@@ -408,9 +376,9 @@ void handleDisplay(void* pvParameters)
       {
         //Load list into local array and sort
         Serial.println("Loading arrays...");
-        loadList(rssiArr, sortUserNameList);
+        listener.updatePeers();
         Serial.println("Sorting arrays...");
-        sortList(rssiArr, sortUserNameList);
+        listener.sortPeers();
 
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
@@ -426,9 +394,10 @@ void handleDisplay(void* pvParameters)
         {
           for(int i = 0; i < listener.getNumCurPeer(); i++)
           {
-            Serial.printf("Username: %s\n", sortUserNameList[i]);
-            snprintf(tmpRssi, 5, "%d", rssiArr[i]);
-            Heltec.display->drawString(0, yCursorPos, sortUserNameList[i]);
+            char *tempUserName = listener.getUserName(i);
+            Serial.printf("Username: %s\n", tempUserName);
+            snprintf(tmpRssi, 5, "%d", listener.getRssi(i));
+            Heltec.display->drawString(0, yCursorPos, tempUserName);
             Heltec.display->drawString(80, yCursorPos, tmpRssi);
             yCursorPos+=10;
           }
