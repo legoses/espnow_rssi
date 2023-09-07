@@ -175,15 +175,17 @@
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/spi_flash/include/esp_spi_flash.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/spi_flash/include/esp_spi_flash_counters.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_hw_support/include/soc/esp32/spiram.h \
- /home/kyle/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src/Wire.h \
- /home/kyle/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal.h \
- /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_now.h \
- /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_wifi_types.h \
+ include/badge_images.h include/display_username.h include/listener.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_wifi.h \
+ /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_wifi_types.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_private/esp_wifi_private.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_wifi_crypto_types.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_private/wifi_os_adapter.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_wifi_default.h \
+ include/peerinfo.h \
+ /home/kyle/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src/Wire.h \
+ /home/kyle/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal.h \
+ /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_now.h \
  .pio/libdeps/heltec_wifi_kit_32_V3/Heltec\ ESP32\ Dev-Boards/src/heltec.h \
  .pio/libdeps/heltec_wifi_kit_32_V3/Heltec\ ESP32\ Dev-Boards/src/oled/SSD1306Wire.h \
  .pio/libdeps/heltec_wifi_kit_32_V3/Heltec\ ESP32\ Dev-Boards/src/oled/OLEDDisplay.h \
