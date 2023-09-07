@@ -37,7 +37,7 @@ char *PeerListener::getUserName(int i)
 {
     for(int i = 0; i < 10; i++)
     {
-        Serial.printf("%s is at %i\n", sortedUserNameList[i], i);
+        Serial.printf("%s is at %i in sorted. %s is at %i in non sorted \n", sortedUserNameList[i], i, userNameList[i], i);
     }
     return this->sortedUserNameList[i];
 }
@@ -143,7 +143,7 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                     Serial.println(i);
                     copyMac(mac, i);
                     rssi[i] = this->tempRssi;
-                    memcpy(userNameList[i], (char*)incomingData, 31);
+                    memcpy(userNameList[i-1], (char*)incomingData, 31);
                     lastSeen[i] = millis();
                     addPeer();
                     xSemaphoreGive(xMutex);

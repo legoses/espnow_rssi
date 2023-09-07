@@ -9,6 +9,7 @@
 /*
   TODO:
   Fix dataRecv adding new peers where it wants to instead of where I am telling it to
+  Update remove peer function
 */
 
 #include <Arduino.h>
