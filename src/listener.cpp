@@ -16,66 +16,27 @@ void PeerListener::promiscuousRecv(int8_t packetRssi)
 }
 
 
-void PeerListener::updatePeers()
+void PeerListener::removeDeadPeer(int item)
 {
-    for(int i = 0; i < getNumCurPeer(); i++)
-    {
-        this->sortedRssi[i] = this->rssi[i];
-        memcpy(sortedUserNameList[i], userNameList[i], 32);
-        Serial.printf("Loaded user name: %s\n", sortedUserNameList[i]);
-    }
+  for(int i = item; i < getOrderedListLen()-1; i++)
+  {
+    Serial.println("removing");
+    Serial.println(i);
+    memcpy(incomingMac[i], incomingMac[i+1], 4);
+    rssi[i] = rssi[i+1];
+    memcpy(userNameList[i], userNameList[i+1], 31);
+    lastSeen[i] = lastSeen[i+1];
+  }
 }
 
 
-int8_t PeerListener::getRssi(int i)
+long PeerListener::getTimeLastSeen(int i)
 {
-    Serial.printf("Returning %i\n", i);
-    return this->sortedRssi[i];
-}
-
-char *PeerListener::getUserName(int i)
-{
-    for(int i = 0; i < 10; i++)
+    if(i < getNumCurPeer())
     {
-        Serial.printf("%s is at %i in sorted. %s is at %i in non sorted \n", sortedUserNameList[i], i, userNameList[i], i);
+        return lastSeen[i];
     }
-    return this->sortedUserNameList[i];
-}
-
-
-void PeerListener::sortPeers()
-{
-    int peers = getNumCurPeer();
-    if(peers > 1)
-    {
-        bool swap = false;
-        for(int i = 0; i < peers; i++)
-        {
-            for(int j = 0; j < peers - i; j++)
-            {
-                int8_t rssiPlaceHolder;
-                char namePlaceHolder[32];
-
-                if((this->sortedRssi[i] < this->sortedRssi[i+1]))
-                {
-                    rssiPlaceHolder = this->sortedRssi[i];
-                    memcpy(namePlaceHolder, this->sortedUserNameList[i], 31);
-
-                    this->sortedRssi[i] = this->sortedRssi[i+1];
-                    memcpy(this->sortedUserNameList[i], this->sortedUserNameList[i+1], 31);
-
-                    this->sortedRssi[i+1] = rssiPlaceHolder;
-                    memcpy(this->sortedUserNameList[i+1], namePlaceHolder, 31);
-                    swap = true;
-                }
-
-                if(swap == false)
-                {
-                    break;
-                }
-            }
-        }
-    }
+    return 0;
 }
 
 

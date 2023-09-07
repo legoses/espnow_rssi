@@ -8,14 +8,14 @@
 
 /*
   TODO:
-  Fix dataRecv adding new peers where it wants to instead of where I am telling it to
-  Update remove peer function
+  Come up with a better way to handle incoming packets, currently initial peer seems to be added twice
 */
 
 #include <Arduino.h>
 #include <badge_images.h>
 #include <display_username.h>
 #include <listener.h>
+#include <displayinfo.h>
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -39,6 +39,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
 PeerListener listener;
+DisplayInfo displayInfo;
 
 //Change to true to enable encryption
 bool encryptESPNOW = false;
@@ -245,15 +246,13 @@ void setup() {
 
   xTaskCreatePinnedToCore(
     checkForDeadPeers
-    , "Print peers"
-    , 2048
+    , "Check dead peers"
+    , 4096
     , NULL
     , 2
     , NULL
     , 0
   );
-
-  PeerListener listen;
 
 
   //Register funciton to be called every time an esp-now packet is revieved
@@ -287,7 +286,7 @@ void loop() {
   Serial.printf("My username: %s\n", userName);
 }
 
-
+/*
 //Remove peers who haven't been seen in 10 seconds
 void removeItem(int item)
 {
@@ -302,50 +301,44 @@ void removeItem(int item)
     
   }
 }
-
+*/
 
 void checkForDeadPeers(void* pvParameters)
 {
   //I don't think this does anything since I don't pass any parameter to this funciton
   //Possibly delete
   (void)pvParameters;
-  delay(10000);
+
   while(true)
   {
-    for(int i = 0; i < numCurPeer; i++)
-    {
-      Serial.println(i);
-      if(millis() - listener.lastSeen[i] > 10000)
+    delay(10000);
+    Serial.println("[INFO] Checking for dead peers");
+    Serial.printf("[INFO] Peers: %i\n", listener.getNumCurPeer());
+
+    for(int i = 0; i < listener.getNumCurPeer(); i++)
+    {  
+      Serial.printf("[INFO] Time last seen: %i\n", listener.getTimeLastSeen(i));
+      long timeLastSeen = listener.getTimeLastSeen(i);
+      if((millis() - timeLastSeen > 10000) && timeLastSeen != 0)
       {
+        Serial.printf("Removing Peer %i\n", i);
           if(xMutex != NULL)
           {
             if(xSemaphoreTake(xMutex, listener.getMaxDelay()) == pdTRUE)
             {
-              removeItem(i);
-              numCurPeer--;
+              listener.removeDeadPeer(i);
+              listener.removePeer();
             }
             xSemaphoreGive(xMutex);
         } 
       }
+      else if(timeLastSeen == 0)
+      {
+        break;
+      }
     }
-    delay(10000);
   }
   return;
-}
-
-//Move from the global array to a local one for sorting
-//Soring global may not be an issue any more because im not using a linked list?
-void loadList(int8_t rssiArr[], char sortUserNameList[][32])
-{
-  Serial.print("peers ");
-  Serial.println(listener.getNumCurPeer());
-
-  for(int i = 0; i < listener.getNumCurPeer(); i++)
-  {
-    Serial.println(i);
-    rssiArr[i] = listener.rssi[i];
-    memcpy(sortUserNameList[i], listener.userNameList[i], 31);
-  }
 }
 
 
@@ -375,11 +368,12 @@ void handleDisplay(void* pvParameters)
 
       if(xSemaphoreTake(xMutex, listener.getMaxDelay()) == pdTRUE)
       {
+        int peers = listener.getNumCurPeer();
         //Load list into local array and sort
         Serial.println("Loading arrays...");
-        listener.updatePeers();
+        displayInfo.updatePeers();
         Serial.println("Sorting arrays...");
-        listener.sortPeers();
+        displayInfo.sortPeers();
 
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
@@ -387,17 +381,17 @@ void handleDisplay(void* pvParameters)
         int yCursorPos = 10;
         char tmpRssi[6];
         
-        if(listener.getNumCurPeer() == 0)
+        if(peers == 0)
         {
           Heltec.display->drawString(0, yCursorPos, "You Are Alone.");
         }
         else
         {
-          for(int i = 0; i < listener.getNumCurPeer(); i++)
+          for(int i = 0; i < peers; i++)
           {
-            char *tempUserName = listener.getUserName(i);
+            char *tempUserName = displayInfo.getUserName(i);
             Serial.printf("Username: %s\n", tempUserName);
-            snprintf(tmpRssi, 5, "%d", listener.getRssi(i));
+            snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(i));
             Heltec.display->drawString(0, yCursorPos, tempUserName);
             Heltec.display->drawString(80, yCursorPos, tmpRssi);
             yCursorPos+=10;
