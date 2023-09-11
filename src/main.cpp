@@ -8,7 +8,7 @@
 
 /*
   TODO:
-  Come up with a better way to handle incoming packets, currently initial peer seems to be added twice
+  Implement scrollingn usernames when there are more peers than can fit on the screen
 */
 
 #include <Arduino.h>
