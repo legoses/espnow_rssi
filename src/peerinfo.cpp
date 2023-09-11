@@ -11,6 +11,7 @@ PeerInfo::PeerInfo()
     xMutex = xSemaphoreCreateMutex();
 }
 
+
 void PeerInfo::addPeer()
 {
     this->numCurPeer += 1;

@@ -72,8 +72,6 @@ int numCurPeer = 0;
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 long timeSinceLastLogo = 0;
 
-
-
 //Hold info to send and recieve data
 typedef struct struct_message {
   int8_t rssi;
@@ -83,14 +81,12 @@ typedef struct struct_message {
 //struct_message sendMessage;
 struct_message recvMessage;
 
-
 esp_now_peer_info_t peerInfo;
 int lineCount = 0;
 int file = 0;
 
 //Create mutex to lock objects and prevent race conditions
 SemaphoreHandle_t xMutex = NULL;
-
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
@@ -109,7 +105,7 @@ void init_wifi()
   esp_wifi_start();
 }
 
-
+//Load espnow peers
 void addPeerInfo()
 {
   //Set channel
@@ -143,7 +139,7 @@ void addPeerInfo()
   }
 }
 
-
+//Display logos on screen
 void displayLogos()
 {
   int screenEdgeBuf = ((img_buffer / 2) * -1) + 10;
@@ -164,13 +160,14 @@ void displayLogos()
   delay(2500);
 }
 
-
+//Handle espnow packets
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
   Serial.println("DATA RECIEVED");
   listener.dataRecv(mac, incomingData);
 }
 
+//Handle any incoming packets
 void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 {
   wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
@@ -254,7 +251,6 @@ void setup() {
     , 0
   );
 
-
   //Register funciton to be called every time an esp-now packet is revieved
   if(esp_now_register_recv_cb(onDataRecv) != ESP_OK)
   {
@@ -266,7 +262,6 @@ void setup() {
   //Set adaptor to promiscuous mode in order to recieve connection info, and register callback function
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_rx_cb(promiscuousRecv);
-
 }
 
 
@@ -408,7 +403,6 @@ void handleDisplay(void* pvParameters)
           }
         }
         display.display();
-
 #endif
       }
       xSemaphoreGive(xMutex);

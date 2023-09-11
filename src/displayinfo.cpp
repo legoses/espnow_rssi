@@ -8,6 +8,12 @@ void DisplayInfo::updatePeers()
         memcpy(sortedUserNameList[i], userNameList[i], 32);
         Serial.printf("Loaded user name: %s\n", sortedUserNameList[i]);
     }
+/*
+    for(int i = 0; i < ORDERED_LIST_LEN; i++)
+    {
+        Serial.printf("Normal index %i: username is %s, rssi is %i.\n Sorted index: username is %s, rssi is %i\n\n", i, userNameList[i], rssi[i], sortedUserNameList[i], sortedRssi[i]);
+    }
+*/
 }
 
 
@@ -20,15 +26,17 @@ int8_t DisplayInfo::getRssi(int i)
 
 char *DisplayInfo::getUserName(int i)
 {
+    Serial.printf("Sending username %s\n", sortedUserNameList[i]);
     return this->sortedUserNameList[i];
 }
 
-
+//Sort by closest peers based off of rssi
 void DisplayInfo::sortPeers()
 {
     int peers = getNumCurPeer();
     if(peers > 1)
     {
+        //Simple bubble sort
         bool swap = false;
         for(int i = 0; i < peers; i++)
         {

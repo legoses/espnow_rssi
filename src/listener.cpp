@@ -4,7 +4,8 @@
 
 void PeerListener::promiscuousRecv(int8_t packetRssi)
 {
-    //Get connection info
+    //Since arduino implementation of espnow does not return rssi, the network interface is put into
+    //promiscuous mode in order to get rssi from all packets
     if(xMutex != NULL)
     {
         if(xSemaphoreTake(xMutex, getMaxDelay()) == pdTRUE)
@@ -18,15 +19,16 @@ void PeerListener::promiscuousRecv(int8_t packetRssi)
 
 void PeerListener::removeDeadPeer(int item)
 {
-  for(int i = item; i < getOrderedListLen()-1; i++)
-  {
-    Serial.println("removing");
-    Serial.println(i);
-    memcpy(incomingMac[i], incomingMac[i+1], 4);
-    rssi[i] = rssi[i+1];
-    memcpy(userNameList[i], userNameList[i+1], 31);
-    lastSeen[i] = lastSeen[i+1];
-  }
+  //Remove peers that have not been seen in the last 10 seconds and all arrays
+    for(int i = item; i < getOrderedListLen()-1; i++)
+    {
+        Serial.println("removing");
+        Serial.println(i);
+        memcpy(incomingMac[i], incomingMac[i+1], 4);
+        rssi[i] = rssi[i+1];
+        memcpy(userNameList[i], userNameList[i+1], 31);
+        lastSeen[i] = lastSeen[i+1];
+    }
 }
 
 
@@ -39,7 +41,7 @@ long PeerListener::getTimeLastSeen(int i)
     return 0;
 }
 
-
+//Handle espnow packets
 int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
 {
     char buf[18];
@@ -64,8 +66,7 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
     {
         if(xSemaphoreTake(xMutex, getMaxDelay()) == pdTRUE)
         {
-            //int8_t tempRssi = recvMessage.rssi;
-
+            Serial.print("Raw MAC: ");
             for(int i = 0; i < 4; i++)
             {
                 Serial.print(mac[i]);
@@ -87,7 +88,7 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                     xSemaphoreGive(xMutex);
                     break;
                 }
-                //update peers
+                //update an existing peer
                 else if(memcmp(mac, incomingMac[i], 4) == 0)
                 {
                     Serial.print("updating ");
@@ -100,11 +101,11 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                 //add new peer
                 else if(i > getNumCurPeer() - 1)
                 {
-                    Serial.print("new peer ");
+                    Serial.print("Init new peer ");
                     Serial.println(i);
                     copyMac(mac, i);
                     rssi[i] = this->tempRssi;
-                    memcpy(userNameList[i-1], (char*)incomingData, 31);
+                    memcpy(userNameList[i], (char*)incomingData, 31);
                     lastSeen[i] = millis();
                     addPeer();
                     xSemaphoreGive(xMutex);
