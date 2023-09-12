@@ -1,6 +1,9 @@
 #include <display_username.h>
 #include "heltec.h"
 
+extern float XS;      //The returned reading is multiplied by this XS to get the battery voltage.
+extern uint16_t MUL;
+extern uint16_t MMUL;
 
 void appendLen(char userName[])
 {
@@ -30,8 +33,8 @@ void displayUsername(char *userName)
 {
   Heltec.display->clear();
   Heltec.display->screenRotate(ANGLE_90_DEGREE);
+  
   int str_len = Heltec.display->getStringWidth(userName, strlen(userName));
-
 
   if(str_len > 64)
   {
@@ -39,11 +42,14 @@ void displayUsername(char *userName)
     str_len = Heltec.display->getStringWidth(userName, strlen(userName));
   }
 
-  Heltec.display->drawString(32-(str_len/2), 0, userName);
+  Heltec.display->drawString((32-(str_len/2))+10, 0, userName);
   Heltec.display->display();
+  
   Heltec.display->screenRotate(ANGLE_0_DEGREE);
   Heltec.display->clear();
+  
 }
+
 
 void clearScreen(void) {
 

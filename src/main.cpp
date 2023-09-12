@@ -9,6 +9,7 @@
 /*
   TODO:
   Implement scrollingn usernames when there are more peers than can fit on the screen
+  Maybe implement battery indicator?
 */
 
 #include <Arduino.h>
@@ -27,6 +28,10 @@
 
 #ifdef heltec_wifi_kit_32_V3
 # include "heltec.h"
+#define Fbattery 3700;
+float XS = 0.0025;      //The returned reading is multiplied by this XS to get the battery voltage.
+uint16_t MUL = 1000;
+uint16_t MMUL = 100;
 #else
 # include <Adafruit_SSD1306.h>
 # include <Adafruit_GFX.h>
@@ -105,6 +110,8 @@ void init_wifi()
   esp_wifi_start();
 }
 
+
+
 //Load espnow peers
 void addPeerInfo()
 {
@@ -176,6 +183,27 @@ void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 }
 
 
+void dispBat()
+{
+  uint16_t c  =  analogRead(20);
+  //uint16_t c  =  analogRead(13)*0.769 + 150;
+  double voltage = (c * 5.0) / 1024.0;
+
+  Serial.print("Battery POWER: ");
+  //Serial.println(voltage);
+  Serial.println(analogRead(20));
+  Serial.println(voltage);
+  Serial.println();
+  
+  char tempBatPow[10];
+  snprintf(tempBatPow, sizeof(voltage), "%d", voltage);
+  int batStrLen = Heltec.display->getStringWidth(tempBatPow, strlen(tempBatPow));
+  Heltec.display->setTextAlignment(TEXT_ALIGN_RIGHT);
+  Heltec.display->drawString(128, 0, (String)voltage);
+  Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
+}
+
+
 void handleDisplay(void *pvParameters);
 void checkForDeadPeers(void *pvParameters);
 
@@ -183,6 +211,14 @@ void checkForDeadPeers(void *pvParameters);
 void setup() {
   Serial.begin(115200);
   xMutex = xSemaphoreCreateMutex();
+
+  //analogSetClockDiv(1);                 // Set the divider for the ADC clock, default is 1, range is 1 - 255
+  //analogSetAttenuation(ADC_11db);       // Sets the input attenuation for ALL ADC inputs, default is ADC_11db, range is ADC_0db, ADC_2_5db, ADC_6db, ADC_11db
+  analogSetPinAttenuation(20,ADC_11db); // Sets the input attenuation, default is ADC_11db, range is ADC_0db, ADC_2_5db, ADC_6db, ADC_11db
+  //analogSetPinAttenuation(36,ADC_11db);
+  adcAttachPin(20);
+  //adcAttachPin(11);
+  //pinMode(20, INPUT);
 
   //Init display
 #ifdef heltec_wifi_kit_32_V3
@@ -266,6 +302,7 @@ void setup() {
 
 
 void loop() {
+  
   //Setting first value to NULL will send data to all registered peers
   //esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
   esp_err_t result = esp_now_send(NULL, (uint8_t*)&userName, sizeof(userName));
@@ -357,6 +394,8 @@ void handleDisplay(void* pvParameters)
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
         Heltec.display->clear();
+        displayUsername(userName);
+        dispBat();
         int yCursorPos = 10;
         char tmpRssi[6];
         
