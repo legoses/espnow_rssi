@@ -175,7 +175,6 @@
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/vendor/vendor_device.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/dfu/dfu_rt_device.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/dfu/dfu.h \
- /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/dfu/dfu_device.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/hal/esp32s3/include/hal/usb_serial_jtag_ll.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/soc/esp32s3/include/soc/usb_serial_jtag_struct.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/hal/esp32s3/include/hal/usb_phy_ll.h \

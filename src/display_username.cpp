@@ -33,7 +33,6 @@ void displayUsername(char *userName)
 {
   Heltec.display->clear();
   Heltec.display->screenRotate(ANGLE_90_DEGREE);
-  
   int str_len = Heltec.display->getStringWidth(userName, strlen(userName));
 
   if(str_len > 64)
@@ -42,12 +41,14 @@ void displayUsername(char *userName)
     str_len = Heltec.display->getStringWidth(userName, strlen(userName));
   }
 
-  Heltec.display->drawString((32-(str_len/2))+10, 0, userName);
+  Heltec.display->drawString(32-(str_len/2), 0, userName);
   Heltec.display->display();
+  delay(1000);
   
   Heltec.display->screenRotate(ANGLE_0_DEGREE);
   Heltec.display->clear();
   
+  Serial.printf("Displaying %s\n", userName);
 }
 
 

@@ -10,6 +10,7 @@
   TODO:
   Implement scrollingn usernames when there are more peers than can fit on the screen
   Maybe implement battery indicator?
+  Figure out how to properly handle username
 */
 
 #include <Arduino.h>
@@ -54,7 +55,7 @@ static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
-char userName[] = "legoses";
+char userName[] = "board 2";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
@@ -62,10 +63,22 @@ char macAddr[][13] = {
   // {"8E5CDAEE1697"}, Example mac
   // {"0504A4C587AF"}  Example mac
   //{"f412fa815118"}, //Eric's mac
-  //{"F412FA66EB00"}, //Kyle's mac
+  {"F412FA66EB00"}, //Kyle's mac
   //{"f412fa66e9ec"} // Paul's mac
-  {"7CDFA1E403AC"}, //non heltec
+  {"5748D7478CF6"}, //board 1
+  //{"2D54894348B1"}, //board 2
+  {"AAB6D1EE3CE0"}, //board 3
+  {"50E4D26527A2"}, //board 4
+  {"48CFD132A07F"}, //board 5
+  {"7E63FF00524F"}, //board 6
+  {"A47D0401A41B"}, //board 7
+  {"3B32A7684799"}, //board 8
+  {"FAF87CBF0F72"}, //board 9
+  {"DC7D7FFA21B8"}, //board 10
+  //{"7CDFA1E403AC"}, //non heltec
 };
+
+const uint8_t boardMac[6] = {0x2D, 0x54, 0x89, 0x43, 0x48, 0xB1};
 
 const int SCREEN_REFRESH = 2500;
 
@@ -102,10 +115,13 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 
 void init_wifi()
 {
+  
   //set default wifi config as recommended by docs
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
+  esp_wifi_set_mac(WIFI_IF_STA, boardMac);
   esp_wifi_set_mode(WIFI_MODE_STA);
+  
 
   esp_wifi_start();
 }
@@ -182,7 +198,7 @@ void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
   listener.promiscuousRecv(packetRssi);
 }
 
-
+/*
 void dispBat()
 {
   uint16_t c  =  analogRead(20);
@@ -202,7 +218,7 @@ void dispBat()
   Heltec.display->drawString(128, 0, (String)voltage);
   Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
 }
-
+*/
 
 void handleDisplay(void *pvParameters);
 void checkForDeadPeers(void *pvParameters);
@@ -393,9 +409,13 @@ void handleDisplay(void* pvParameters)
 
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
-        Heltec.display->clear();
-        displayUsername(userName);
-        dispBat();
+        //Heltec.display->clear();
+        //displayUsername(userName);
+        Heltec.display->setColor(BLACK);
+        Heltec.display->fillRect(0, 0, 100, 64);
+        Heltec.display->setColor(WHITE);
+        
+        //dispBat();
         int yCursorPos = 10;
         char tmpRssi[6];
         
