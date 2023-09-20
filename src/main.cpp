@@ -55,7 +55,7 @@ static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
-char userName[] = "board 2";
+char userName[] = "legoses";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
@@ -63,10 +63,10 @@ char macAddr[][13] = {
   // {"8E5CDAEE1697"}, Example mac
   // {"0504A4C587AF"}  Example mac
   //{"f412fa815118"}, //Eric's mac
-  {"F412FA66EB00"}, //Kyle's mac
+  //{"F412FA66EB00"}, //Kyle's mac
   //{"f412fa66e9ec"} // Paul's mac
-  {"5748D7478CF6"}, //board 1
-  //{"2D54894348B1"}, //board 2
+  //{"5748D7478CF6"}, //board 1
+  {"2D54894348B1"}, //board 2
   {"AAB6D1EE3CE0"}, //board 3
   {"50E4D26527A2"}, //board 4
   {"48CFD132A07F"}, //board 5
@@ -78,7 +78,17 @@ char macAddr[][13] = {
   //{"7CDFA1E403AC"}, //non heltec
 };
 
-const uint8_t boardMac[6] = {0x2D, 0x54, 0x89, 0x43, 0x48, 0xB1};
+//uint8_t boardMac[6] = {0x57, 0x48, 0xD7, 0x47, 0x8C, 0xF6}; //board 1
+uint8_t boardMac[6] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55}; //board 1
+//const uint8_t boardMac[6] = {0x2D, 0x54, 0x89, 0x43, 0x48, 0xB1}; //board 2
+//const uint8_t boardMac[6] = {0xAA, 0xB6, 0xD1, 0xEE, 0x3C, 0xE0}; //board 3
+//const uint8_t boardMac[6] = {0x50, 0xE4, 0xD2, 0x65, 0x27, 0xA2}; //board 4
+//const uint8_t boardMac[6] = {0x48, 0xCF, 0xD1, 0x32, 0xA0, 0x7F}; //board 5
+//const uint8_t boardMac[6] = {0x7E, 0x63, 0xFF, 0x00, 0x52, 0x4F}; //board 6
+//const uint8_t boardMac[6] = {0xA4, 0x7D, 0x04, 0x01, 0xA4, 0x1B}; //board 7
+//const uint8_t boardMac[6] = {0x3B, 0x32, 0xA7, 0x68, 0x47, 0x99}; //board 8
+//const uint8_t boardMac[6] = {0xFA, 0xF8, 0x7C, 0xBF, 0x0F, 0x72}; //board 9
+//const uint8_t boardMac[6] = {0xDC, 0x7D, 0x7F, 0xFA, 0x21, 0xB8}; //board 10
 
 const int SCREEN_REFRESH = 2500;
 
@@ -119,13 +129,38 @@ void init_wifi()
   //set default wifi config as recommended by docs
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
-  esp_wifi_set_mac(WIFI_IF_STA, boardMac);
-  esp_wifi_set_mode(WIFI_MODE_STA);
+
   
+  esp_err_t setMac = esp_wifi_set_mac(WIFI_IF_STA, boardMac);
+  if(setMac != ESP_OK)
+  {
+    Serial.println("Unable to init wifi");
+    switch(setMac)
+    {
+      case ESP_ERR_WIFI_NOT_INIT:
+        Serial.println("Wifi not init");
+        break;
+      case ESP_ERR_INVALID_ARG:
+        Serial.println("Invalid args");
+        break;
+      case ESP_ERR_WIFI_IF:
+        Serial.println("Invalid interface");
+        break;
+      case ESP_ERR_WIFI_MAC:
+        Serial.println("Invalid mac");
+        break;
+      case ESP_ERR_WIFI_MODE:
+        Serial.println("Wifi mode is wrong");
+        break;
+      default:
+        Serial.println("You did it wrong dumbass");
+    }
+    return;
+  }
+  esp_wifi_set_mode(WIFI_MODE_STA);
 
   esp_wifi_start();
 }
-
 
 
 //Load espnow peers
@@ -176,11 +211,18 @@ void displayLogos()
     delay(25);
     pimaLogoDelay+=25;
   }
-  delay(2500-pimaLogoDelay);
+  delay(2000-pimaLogoDelay);
   Heltec.display->clear();
   Heltec.display->drawXbm(screenEdgeBuf, 0, 71, 62, range_logo);
   Heltec.display->display();
-  delay(2500);
+  delay(2000);
+  Heltec.display->clear();
+  Heltec.display->setTextAlignment(TEXT_ALIGN_CENTER);
+  Heltec.display->drawString(64, 10, "[UserName]");
+  Heltec.display->drawString(64, 20, userName);
+  Heltec.display->display();
+  delay(1000);
+  Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
 }
 
 //Handle espnow packets
@@ -243,7 +285,7 @@ void setup() {
   Heltec.display->clear();
   Heltec.display->setFont(ArialMT_Plain_10);
  
-  displayUsername(userName);
+  //displayUsername(userName);
   
   displayLogos();
 
@@ -316,8 +358,19 @@ void setup() {
   esp_wifi_set_promiscuous_rx_cb(promiscuousRecv);
 }
 
+//delete this
+void printMac()
+{
+  uint8_t mac[6];
+  esp_wifi_get_mac(WIFI_IF_STA, mac);
+
+  Serial.print("[INFO] New Mac Address: ");
+    Serial.printf("%x:%x:%x:%x:%x:%x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+
 
 void loop() {
+  printMac();
   
   //Setting first value to NULL will send data to all registered peers
   //esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
