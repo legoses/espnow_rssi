@@ -9,8 +9,8 @@
 /*
   TODO:
   Implement scrollingn usernames when there are more peers than can fit on the screen
-  Maybe implement battery indicator?
-  Figure out how to properly handle username
+  Flash boards 6-10
+  Fix board one not recieving packets from other boards
 */
 
 #include <Arduino.h>
@@ -55,7 +55,7 @@ static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
-char userName[] = "legoses";
+char userName[] = "board 5";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
@@ -65,30 +65,30 @@ char macAddr[][13] = {
   //{"f412fa815118"}, //Eric's mac
   //{"F412FA66EB00"}, //Kyle's mac
   //{"f412fa66e9ec"} // Paul's mac
-  //{"5748D7478CF6"}, //board 1
-  {"2D54894348B1"}, //board 2
-  {"AAB6D1EE3CE0"}, //board 3
-  {"50E4D26527A2"}, //board 4
-  {"48CFD132A07F"}, //board 5
-  {"7E63FF00524F"}, //board 6
-  {"A47D0401A41B"}, //board 7
-  {"3B32A7684799"}, //board 8
-  {"FAF87CBF0F72"}, //board 9
-  {"DC7D7FFA21B8"}, //board 10
+  {"CECF6323E41E"}, //board 1
+  {"EA8CD317B388"}, //board 2
+  {"8E2267184D34"}, //board 3
+  {"0A59C6EF3809"}, //board 4
+  //{"94AE8D793ABF"}, //board 5
+  {"829E188E3507"}, //board 6
+  {"74FC2F78DB4F"}, //board 7
+  {"F2BF50A0AEE9"}, //board 8
+  {"28973258A0B5"}, //board 9
+  {"7A449F4784C6"}, //board 10
   //{"7CDFA1E403AC"}, //non heltec
 };
 
-//uint8_t boardMac[6] = {0x57, 0x48, 0xD7, 0x47, 0x8C, 0xF6}; //board 1
-uint8_t boardMac[6] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55}; //board 1
-//const uint8_t boardMac[6] = {0x2D, 0x54, 0x89, 0x43, 0x48, 0xB1}; //board 2
-//const uint8_t boardMac[6] = {0xAA, 0xB6, 0xD1, 0xEE, 0x3C, 0xE0}; //board 3
-//const uint8_t boardMac[6] = {0x50, 0xE4, 0xD2, 0x65, 0x27, 0xA2}; //board 4
-//const uint8_t boardMac[6] = {0x48, 0xCF, 0xD1, 0x32, 0xA0, 0x7F}; //board 5
-//const uint8_t boardMac[6] = {0x7E, 0x63, 0xFF, 0x00, 0x52, 0x4F}; //board 6
-//const uint8_t boardMac[6] = {0xA4, 0x7D, 0x04, 0x01, 0xA4, 0x1B}; //board 7
-//const uint8_t boardMac[6] = {0x3B, 0x32, 0xA7, 0x68, 0x47, 0x99}; //board 8
-//const uint8_t boardMac[6] = {0xFA, 0xF8, 0x7C, 0xBF, 0x0F, 0x72}; //board 9
+//const uint8_t boardMac[6] = {0xCE, 0xCF, 0x63, 0x23, 0xE4, 0x1E}; //board 1
+//const uint8_t boardMac[6] = {0xEA, 0x8C, 0xD3, 0x17, 0xB3, 0x88}; //board 2
+//const uint8_t boardMac[6] = {0x8E, 0x22, 0x67, 0x18, 0x4D, 0x34}; //board 3
+//const uint8_t boardMac[6] = {0x0A, 0x59, 0xC6, 0xEF, 0x38, 0x09}; //board 4
+const uint8_t boardMac[6] = {0x94, 0xAE, 0x8D, 0x79, 0x3A, 0xBF}; //board 5
+//const uint8_t boardMac[6] = {0x82, 0x9E, 0x18, 0x8E, 0x35, 0x07}; //board 6
+//const uint8_t boardMac[6] = {0x74, 0xFC, 0x2F, 0x78, 0xDB, 0x4F}; //board 7
+//const uint8_t boardMac[6] = {0xF2, 0xBF, 0x50, 0xA0, 0xAE, 0xE9}; //board 8
+//const uint8_t boardMac[6] = {0x28, 0x97, 0x32, 0x58, 0xA0, 0xB5}; //board 9
 //const uint8_t boardMac[6] = {0xDC, 0x7D, 0x7F, 0xFA, 0x21, 0xB8}; //board 10
+//const uint8_t boardMac[6] = {0x7A, 0x44, 0x9F, 0x47, 0x84, 0xC6}; //board 10
 
 const int SCREEN_REFRESH = 2500;
 
