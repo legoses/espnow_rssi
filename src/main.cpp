@@ -8,9 +8,9 @@
 
 /*
   TODO:
-  Implement scrollingn usernames when there are more peers than can fit on the screen
-  Flash boards 6-10
-  Fix board one not recieving packets from other boards
+  Micrage from using macs to identify boards to randomly generated numbers
+  Implement class to send data, and recieve data
+  Convert functions from comparing macs to random generated number
 */
 
 #include <Arduino.h>

@@ -15,3 +15,16 @@ uint8_t *SelfInfo::getSelfIdentifier()
 {
     return this->selfIdentifier;
 }
+
+void SelfInfo::setUserName(char* userName)
+{
+    if(sizeof(userName) > 100)
+    {
+        this->userName = (char*)memalloc(sizeof(userName));
+        memcpy(this->userName, userName, sizeof(this->userName));
+    }
+    else
+    {
+        Serial.println("[Error] Username too large");
+    }
+}
