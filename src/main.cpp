@@ -18,6 +18,7 @@
 #include <display_username.h>
 #include <listener.h>
 #include <displayinfo.h>
+#include <selfInfo.h>
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -46,6 +47,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 PeerListener listener;
 DisplayInfo displayInfo;
+SelfInfo selfInfo;
 
 //Change to true to enable encryption
 bool encryptESPNOW = false;
@@ -88,7 +90,7 @@ char macAddr[][13] = {
   //{"7CDFA1E403AC"}, //non heltec
 };
 */
-const uint8_t boardMac[6] = {0xfc, 0x2f, 0x46, 0x4d, 0x96, 0x3f}; //board 1
+//const uint8_t boardMac[6] = {0xfc, 0x2f, 0x46, 0x4d, 0x96, 0x3f}; //board 1
 //const uint8_t boardMac[6] = {0xCE, 0xCF, 0x63, 0x23, 0xE4, 0x1E}; //board 1
 //const uint8_t boardMac[6] = {0xEA, 0x8C, 0xD3, 0x17, 0xB3, 0x88}; //board 2
 //const uint8_t boardMac[6] = {0x8E, 0x22, 0x67, 0x18, 0x4D, 0x34}; //board 3
@@ -397,6 +399,13 @@ void loop() {
   }
   delay(2000);
   Serial.printf("My username: %s\n", userName);
+  Serial.print("[INFO] Identifier: ");
+  uint8_t *ident = selfInfo.getSelfIdentifier();
+  for(int i = 0; i < 16; i++)
+  {
+    Serial.print(ident[i]);
+  }
+  Serial.println();
 }
 
 

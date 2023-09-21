@@ -182,7 +182,7 @@
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_wifi_crypto_types.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_private/wifi_os_adapter.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_wifi_default.h \
- include/peerinfo.h include/displayinfo.h \
+ include/peerinfo.h include/displayinfo.h include/selfInfo.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src/Wire.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/esp_wifi/include/esp_now.h \
