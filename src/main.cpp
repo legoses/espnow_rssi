@@ -55,21 +55,31 @@ static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
-char userName[] = "board 5";
+char userName[] = "board 1";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
+//origional macs
+char macAddr[][13] = {
+  //{"F412FA745B2C"}, // board 1
+  {"F412FA744A5C"}, // board 2
+  {"F412FA745B84"}, // board 3
+  {"F412FA75F1D0"}, // board 4
+  {"F412FA744AA4"}, // board 5
+};
+/*
+//spoofed macs
 char macAddr[][13] = {
   // {"8E5CDAEE1697"}, Example mac
   // {"0504A4C587AF"}  Example mac
   //{"f412fa815118"}, //Eric's mac
   //{"F412FA66EB00"}, //Kyle's mac
   //{"f412fa66e9ec"} // Paul's mac
-  {"CECF6323E41E"}, //board 1
-  {"EA8CD317B388"}, //board 2
+  {"fc2f464d963f"}, //board 1
+  //{"EA8CD317B388"}, //board 2
   {"8E2267184D34"}, //board 3
   {"0A59C6EF3809"}, //board 4
-  //{"94AE8D793ABF"}, //board 5
+  {"94AE8D793ABF"}, //board 5
   {"829E188E3507"}, //board 6
   {"74FC2F78DB4F"}, //board 7
   {"F2BF50A0AEE9"}, //board 8
@@ -77,12 +87,13 @@ char macAddr[][13] = {
   {"7A449F4784C6"}, //board 10
   //{"7CDFA1E403AC"}, //non heltec
 };
-
+*/
+const uint8_t boardMac[6] = {0xfc, 0x2f, 0x46, 0x4d, 0x96, 0x3f}; //board 1
 //const uint8_t boardMac[6] = {0xCE, 0xCF, 0x63, 0x23, 0xE4, 0x1E}; //board 1
 //const uint8_t boardMac[6] = {0xEA, 0x8C, 0xD3, 0x17, 0xB3, 0x88}; //board 2
 //const uint8_t boardMac[6] = {0x8E, 0x22, 0x67, 0x18, 0x4D, 0x34}; //board 3
 //const uint8_t boardMac[6] = {0x0A, 0x59, 0xC6, 0xEF, 0x38, 0x09}; //board 4
-const uint8_t boardMac[6] = {0x94, 0xAE, 0x8D, 0x79, 0x3A, 0xBF}; //board 5
+//const uint8_t boardMac[6] = {0x94, 0xAE, 0x8D, 0x79, 0x3A, 0xBF}; //board 5
 //const uint8_t boardMac[6] = {0x82, 0x9E, 0x18, 0x8E, 0x35, 0x07}; //board 6
 //const uint8_t boardMac[6] = {0x74, 0xFC, 0x2F, 0x78, 0xDB, 0x4F}; //board 7
 //const uint8_t boardMac[6] = {0xF2, 0xBF, 0x50, 0xA0, 0xAE, 0xE9}; //board 8
@@ -130,7 +141,7 @@ void init_wifi()
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
 
-  
+  /* 
   esp_err_t setMac = esp_wifi_set_mac(WIFI_IF_STA, boardMac);
   if(setMac != ESP_OK)
   {
@@ -157,6 +168,7 @@ void init_wifi()
     }
     return;
   }
+  */
   esp_wifi_set_mode(WIFI_MODE_STA);
 
   esp_wifi_start();
