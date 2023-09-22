@@ -9,6 +9,7 @@ long PeerInfo::lastSeen[ORDERED_LIST_LEN];
 PeerInfo::PeerInfo()
 {
     xMutex = xSemaphoreCreateMutex();
+
 }
 
 
@@ -30,11 +31,11 @@ int PeerInfo::getNumCurPeer()
 }
 
 
-void PeerInfo::copyMac(const uint8_t *mac, int j)
+void PeerInfo::copyIdentifier(uint8_t identifier[], int j)
 {
-  for(int i = 0; i < 4; i++)
+  for(int i = 0; i < 16; i++)
   {
-    this->incomingMac[j][i] = mac[i];
+    this->incomingMac[j][i] = identifier[i];
   }
 }
 

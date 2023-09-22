@@ -8,9 +8,9 @@
 
 /*
   TODO:
-  Micrage from using macs to identify boards to randomly generated numbers
-  Implement class to send data, and recieve data
-  Convert functions from comparing macs to random generated number
+  Get the macs and flash last 5 boards
+  Fix sorting
+  figure out why new boards appear twice on other devices
 */
 
 #include <Arduino.h>
@@ -18,7 +18,6 @@
 #include <display_username.h>
 #include <listener.h>
 #include <displayinfo.h>
-#include <selfInfo.h>
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -47,7 +46,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 PeerListener listener;
 DisplayInfo displayInfo;
-SelfInfo selfInfo;
 
 //Change to true to enable encryption
 bool encryptESPNOW = false;
@@ -57,17 +55,18 @@ static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
-char userName[] = "board 1";
+char userName[] = "board 3";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
 //origional macs
 char macAddr[][13] = {
-  //{"F412FA745B2C"}, // board 1
+  {"F412FA745B2C"}, // board 1
   {"F412FA744A5C"}, // board 2
-  {"F412FA745B84"}, // board 3
+  //{"F412FA745B84"}, // board 3
   {"F412FA75F1D0"}, // board 4
   {"F412FA744AA4"}, // board 5
+  //{"FFFFFFFFFFFF"},
 };
 /*
 //spoofed macs
@@ -85,7 +84,7 @@ char macAddr[][13] = {
   {"829E188E3507"}, //board 6
   {"74FC2F78DB4F"}, //board 7
   {"F2BF50A0AEE9"}, //board 8
-  {"28973258A0B5"}, //board 9
+  "28973258A0B5"}, //board 9
   {"7A449F4784C6"}, //board 10
   //{"7CDFA1E403AC"}, //non heltec
 };
@@ -113,6 +112,7 @@ int numCurPeer = 0;
 int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 long timeSinceLastLogo = 0;
 
+/*
 //Hold info to send and recieve data
 typedef struct struct_message {
   int8_t rssi;
@@ -121,8 +121,11 @@ typedef struct struct_message {
 
 //struct_message sendMessage;
 struct_message recvMessage;
+*/
+
 
 esp_now_peer_info_t peerInfo;
+
 int lineCount = 0;
 int file = 0;
 
@@ -276,6 +279,11 @@ void dispBat()
 }
 */
 
+void setUsername()
+{
+
+}
+
 void handleDisplay(void *pvParameters);
 void checkForDeadPeers(void *pvParameters);
 
@@ -283,6 +291,13 @@ void checkForDeadPeers(void *pvParameters);
 void setup() {
   Serial.begin(115200);
   xMutex = xSemaphoreCreateMutex();
+
+  //Set username and check size
+  if(listener.setUserName(userName, sizeof(userName)) != 0)
+  {
+    Serial.println("[ERROR] UserName too large");
+    return;
+  }
 
   //analogSetClockDiv(1);                 // Set the divider for the ADC clock, default is 1, range is 1 - 255
   //analogSetAttenuation(ADC_11db);       // Sets the input attenuation for ALL ADC inputs, default is ADC_11db, range is ADC_0db, ADC_2_5db, ADC_6db, ADC_11db
@@ -385,26 +400,11 @@ void printMac()
 
 void loop() {
   printMac();
-  
+  listener.nametest();
+  listener.send_esp();
   //Setting first value to NULL will send data to all registered peers
   //esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
-  esp_err_t result = esp_now_send(NULL, (uint8_t*)&userName, sizeof(userName));
-  if(result == ESP_OK)
-  {
-    Serial.println("Sent With Success");
-  }
-  else 
-  {
-    Serial.println("Error Sending Data");
-  }
   delay(2000);
-  Serial.printf("My username: %s\n", userName);
-  Serial.print("[INFO] Identifier: ");
-  uint8_t *ident = selfInfo.getSelfIdentifier();
-  for(int i = 0; i < 16; i++)
-  {
-    Serial.print(ident[i]);
-  }
   Serial.println();
 }
 

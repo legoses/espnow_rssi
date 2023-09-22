@@ -7,6 +7,7 @@ class PeerInfo
 {
     static int numCurPeer;
     
+    
     public:
         PeerInfo();
         static const int MAX_DELAY = 1000;
@@ -23,7 +24,7 @@ class PeerInfo
         void addPeer();
         void removePeer();
 
-        void copyMac(const uint8_t *mac, int j);
+        void copyIdentifier(uint8_t identifier[], int j);
         const int getMaxDelay();
         const int getOrderedListLen();  
 };

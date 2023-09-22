@@ -1,5 +1,52 @@
 #include <listener.h>
 #include <Arduino.h>
+#include <bootloader_random.h>
+#include "esp_now.h"
+
+
+void PeerListener::nametest()
+{
+    Serial.print("[INFO] SET USERNAME: ");
+    Serial.println(sendInfo.userName);
+}
+
+
+int PeerListener::setUserName(char *userName, int size)
+{
+    if(size < 32)
+    {
+        strcpy(sendInfo.userName, userName);
+    }
+    else
+    {
+        return 1;
+    }
+    return 0;
+}
+
+
+void PeerListener::send_esp()
+{
+  esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendInfo, sizeof(sendInfo));
+  if(result == ESP_OK)
+  {
+    Serial.println("Sent With Success");
+  }
+  else 
+  {
+    Serial.println("Error Sending Data");
+  }
+
+}
+
+
+PeerListener::PeerListener()
+{
+    bootloader_random_enable();
+    //selfIdentifier = esp_random();
+    bootloader_fill_random(sendInfo.selfIdentifier, 16);
+    bootloader_random_disable();
+}
 
 
 void PeerListener::promiscuousRecv(int8_t packetRssi)
@@ -44,57 +91,46 @@ long PeerListener::getTimeLastSeen(int i)
 //Handle espnow packets
 int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
 {
+    memcpy(&recvInfo, incomingData, sizeof(recvInfo));
     char buf[18];
     
     Serial.println("recv Data");
-    Serial.print("Recieved MAC: ");
-    snprintf(buf, sizeof(buf), "%02x:%02x:%02x::%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-
-    for(int i = 0; i < 4; i++)
+    //Serial.print("Recieved MAC: ");
+    //snprintf(buf, sizeof(buf), "%02x:%02x:%02x::%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    Serial.print("Recieved identifier");
+    for(int i = 0; i < 16; i++)
     {
-        Serial.print(mac[i]);
-        Serial.print(" ");
+        Serial.print(recvInfo.selfIdentifier[i]);
     }
+    Serial.println();
+    Serial.print("Recv Username: ");
+    Serial.println(recvInfo.userName);
+
     //Debug
-    Serial.println();
-    Serial.println(buf);
-    Serial.print("Incoming Data: ");
-    Serial.println(*incomingData);
-    Serial.println();
-    Serial.println();
     if(xMutex != NULL)
     {
         if(xSemaphoreTake(xMutex, getMaxDelay()) == pdTRUE)
         {
-            Serial.print("Raw MAC: ");
-            for(int i = 0; i < 4; i++)
-            {
-                Serial.print(mac[i]);
-            }
-
-            Serial.println();
-            Serial.println((char*)incomingData);
-
             for(int i = 0; i < getOrderedListLen(); i++)
             {
                 //Init first peer
                 if(getNumCurPeer() == 0)
                 {
-                    copyMac(mac, 0);
+                    copyIdentifier(recvInfo.selfIdentifier, 0);
                     rssi[0] = this->tempRssi;
-                    memcpy(userNameList[0], incomingData, 31);
+                    memcpy(userNameList[0], recvInfo.userName, 31);
                     lastSeen[0] = millis();
                     addPeer();
                     xSemaphoreGive(xMutex);
                     break;
                 }
                 //update an existing peer
-                else if(memcmp(mac, incomingMac[i], 4) == 0)
+                else if(memcmp(recvInfo.selfIdentifier, incomingMac[i], 4) == 0)
                 {
                     Serial.print("updating ");
                     Serial.println(i);
                     rssi[i] = this->tempRssi;
-                    memcpy(userNameList[i], incomingData, 31);
+                    memcpy(userNameList[i], recvInfo.userName, 31);
                     lastSeen[i] = millis();
                     break;
                 }
@@ -103,9 +139,9 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                 {
                     Serial.print("Init new peer ");
                     Serial.println(i);
-                    copyMac(mac, i);
+                    copyIdentifier(recvInfo.selfIdentifier, i);
                     rssi[i] = this->tempRssi;
-                    memcpy(userNameList[i], (char*)incomingData, 31);
+                    memcpy(userNameList[i], recvInfo.userName, 31);
                     lastSeen[i] = millis();
                     addPeer();
                     xSemaphoreGive(xMutex);
