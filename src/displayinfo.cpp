@@ -43,7 +43,7 @@ void DisplayInfo::sortPeers()
         {
             for(int j = 0; j < peers - i - 1; j++)
             {
-            iterations++;
+            //iterations++;
                 int8_t rssiPlaceHolder;
                 char namePlaceHolder[32];
                 Serial.print("Comparing ");
@@ -53,19 +53,19 @@ void DisplayInfo::sortPeers()
 
                 if((this->sortedRssi[j] < this->sortedRssi[j+1]))
                 {
-                    Serial.printf("Placing rssi in placeholder\n");
+                    //Serial.printf("Placing rssi in placeholder\n");
                     rssiPlaceHolder = this->sortedRssi[j];
-                    Serial.printf("Placing name in placeholder\n");
+                    //Serial.printf("Placing name in placeholder\n");
                     memcpy(namePlaceHolder, this->sortedUserNameList[j], 31);
 
-                    Serial.printf("Placing rssi in %i\n", j);
+                    //Serial.printf("Placing rssi in %i\n", j);
                     this->sortedRssi[j] = this->sortedRssi[j+1];
-                    Serial.printf("Placing name in %i\n", j);
+                    //Serial.printf("Placing name in %i\n", j);
                     memcpy(this->sortedUserNameList[j], this->sortedUserNameList[j+1], 31);
 
-                    Serial.printf("Placing rssi in %i\n", j+1);
+                    //Serial.printf("Placing rssi in %i\n", j+1);
                     this->sortedRssi[j+1] = rssiPlaceHolder;
-                    Serial.printf("Placing name in %i\n", j+1);
+                    //Serial.printf("Placing name in %i\n", j+1);
                     memcpy(this->sortedUserNameList[j+1], namePlaceHolder, 31);
                     swap = true;
                     if(j+1 == 2)

@@ -55,14 +55,14 @@ static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
-char userName[] = "board 10";
+char userName[] = "board 2";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
 //origional macs
 char macAddr[][13] = {
   {"F412FA745B2C"}, // board 1
-  {"F412FA744A5C"}, // board 2
+  //{"F412FA744A5C"}, // board 2
   {"F412FA745B84"}, // board 3
   {"F412FA75F1D0"}, // board 4
   {"F412FA744AA4"}, // board 5
@@ -70,7 +70,7 @@ char macAddr[][13] = {
   {"F412FA74DE00"}, //board 7
   {"F412FA74492C"}, //board 8
   {"F412FA7449F8"}, //board 9
-  //{"F412FA745B0C"}, //board 10
+  {"F412FA745B0C"}, //board 10
 };
 /*
 //spoofed macs
@@ -357,7 +357,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     handleDisplay
     , "Print peers"
-    , 4096
+    , 8192
     , NULL
     , 1
     , NULL
@@ -479,33 +479,69 @@ void handleDisplay(void* pvParameters)
         Heltec.display->setColor(WHITE);
         
         //dispBat();
-        int yCursorPos = 10;
+        int yCursorPos = 5;
         char tmpRssi[6];
+        Serial.print("PEERS: ");
+        Serial.println(peers);
         
         if(peers == 0)
         {
           Heltec.display->drawString(0, yCursorPos, "You Are Alone.");
         }
         //Scroll through peers if there are too many to fit on the screen
-        else if(peers > 4)
+        else if(peers > 5)
         {
-          for(int i = 0; i > peers-4; i++)
+          Serial.println("Peer loop: ");
+          for(int i = 0; i < peers-4; i++)
           {
-            for(int j = i; j < peers; j++)
+            Heltec.display->clear();
+            //Serial.println(i);
+            for(int j = i; j < i+5; j++)
+            {
+              Serial.println(j);
+              char *tempUserName = displayInfo.getUserName(j);
+              //Serial.printf("Username: %s\n", tempUserName);
+              snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(j));
+
+              char placeNum[10];
+              snprintf(placeNum, 10, "%i. ", j+1);
+              ////Serial.println(placeNum);
+              
+              Heltec.display->drawString(0, yCursorPos, placeNum);
+              Heltec.display->drawString(15, yCursorPos, tempUserName);
+              Heltec.display->drawString(80, yCursorPos, tmpRssi);
+              yCursorPos+=10;
+              
+            }
+            Heltec.display->display();
+            delay(1500);
+            yCursorPos = 5;
+          }
+          Serial.println("reverse");
+          //Display peers is reverse order
+          for(int i = peers; i > 5; i--)
+          {
+            
+            Heltec.display->clear();
+            for(int j = i-5; j < i; j++)
             {
               char *tempUserName = displayInfo.getUserName(j);
               //Serial.printf("Username: %s\n", tempUserName);
               snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(j));
 
               char placeNum[10];
-              snprintf(placeNum, 10, "%i. ", i+1);
+              snprintf(placeNum, 10, "%i. ", j+1);
               ////Serial.println(placeNum);
-
+              
               Heltec.display->drawString(0, yCursorPos, placeNum);
               Heltec.display->drawString(15, yCursorPos, tempUserName);
               Heltec.display->drawString(80, yCursorPos, tmpRssi);
               yCursorPos+=10;
+              
             }
+            Heltec.display->display();
+            delay(1500);
+            yCursorPos = 5;
           }
         }
         else

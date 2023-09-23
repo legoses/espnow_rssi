@@ -192,5 +192,4 @@
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/midi/midi.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/vendor/vendor_device.h \
  /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/dfu/dfu_rt_device.h \
- /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/dfu/dfu.h \
- /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/dfu/dfu_device.h
+ /home/kyle/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/arduino_tinyusb/tinyusb/src/class/dfu/dfu.h
