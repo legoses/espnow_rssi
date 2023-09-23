@@ -4,13 +4,6 @@
 #include "esp_now.h"
 
 
-void PeerListener::nametest()
-{
-    Serial.print("[INFO] SET USERNAME: ");
-    Serial.println(sendInfo.userName);
-}
-
-
 int PeerListener::setUserName(char *userName, int size)
 {
     if(size < 32)
@@ -30,11 +23,11 @@ void PeerListener::send_esp()
   esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendInfo, sizeof(sendInfo));
   if(result == ESP_OK)
   {
-    Serial.println("Sent With Success");
+    //Serial.println("Sent With Success");
   }
   else 
   {
-    Serial.println("Error Sending Data");
+    //Serial.println("Error Sending Data");
   }
 
 }
@@ -69,8 +62,8 @@ void PeerListener::removeDeadPeer(int item)
   //Remove peers that have not been seen in the last 10 seconds and all arrays
     for(int i = item; i < getOrderedListLen()-1; i++)
     {
-        Serial.println("removing");
-        Serial.println(i);
+        //Serial.println("removing");
+        //Serial.println(i);
         memcpy(incomingMac[i], incomingMac[i+1], 4);
         rssi[i] = rssi[i+1];
         memcpy(userNameList[i], userNameList[i+1], 31);
@@ -94,17 +87,17 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
     memcpy(&recvInfo, incomingData, sizeof(recvInfo));
     char buf[18];
     
-    Serial.println("recv Data");
-    //Serial.print("Recieved MAC: ");
+    //Serial.println("recv Data");
+    ////Serial.print("Recieved MAC: ");
     //snprintf(buf, sizeof(buf), "%02x:%02x:%02x::%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    Serial.print("Recieved identifier");
+    //Serial.print("Recieved identifier");
     for(int i = 0; i < 16; i++)
     {
-        Serial.print(recvInfo.selfIdentifier[i]);
+        //Serial.print(recvInfo.selfIdentifier[i]);
     }
-    Serial.println();
-    Serial.print("Recv Username: ");
-    Serial.println(recvInfo.userName);
+    //Serial.println();
+    //Serial.print("Recv Username: ");
+    //Serial.println(recvInfo.userName);
 
     //Debug
     if(xMutex != NULL)
@@ -127,8 +120,8 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                 //update an existing peer
                 else if(memcmp(recvInfo.selfIdentifier, incomingMac[i], 4) == 0)
                 {
-                    Serial.print("updating ");
-                    Serial.println(i);
+                    //Serial.print("updating ");
+                    //Serial.println(i);
                     rssi[i] = this->tempRssi;
                     memcpy(userNameList[i], recvInfo.userName, 31);
                     lastSeen[i] = millis();
@@ -137,8 +130,8 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
                 //add new peer
                 else if(i > getNumCurPeer() - 1)
                 {
-                    Serial.print("Init new peer ");
-                    Serial.println(i);
+                    //Serial.print("Init new peer ");
+                    //Serial.println(i);
                     copyIdentifier(recvInfo.selfIdentifier, i);
                     rssi[i] = this->tempRssi;
                     memcpy(userNameList[i], recvInfo.userName, 31);

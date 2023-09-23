@@ -2,7 +2,7 @@
 
 int PeerInfo::numCurPeer = 0;
 int8_t PeerInfo::rssi[ORDERED_LIST_LEN];
-uint8_t PeerInfo::incomingMac[ORDERED_LIST_LEN][5];
+uint8_t PeerInfo::incomingMac[ORDERED_LIST_LEN][16];
 char PeerInfo::userNameList[ORDERED_LIST_LEN][32];
 long PeerInfo::lastSeen[ORDERED_LIST_LEN];
 
