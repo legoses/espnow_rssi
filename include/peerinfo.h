@@ -10,7 +10,7 @@ class PeerInfo
     
     public:
         PeerInfo();
-        static const int MAX_DELAY = 1000;
+        static const int MAX_DELAY = 5000;
         static const int ORDERED_LIST_LEN = 25;
 
         static uint8_t incomingMac[ORDERED_LIST_LEN][16];

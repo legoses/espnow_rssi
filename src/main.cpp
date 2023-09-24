@@ -18,6 +18,7 @@
 #include <display_username.h>
 #include <listener.h>
 #include <displayinfo.h>
+#include <esp_heap_caps.h>
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -33,6 +34,7 @@
 float XS = 0.0025;      //The returned reading is multiplied by this XS to get the battery voltage.
 uint16_t MUL = 1000;
 uint16_t MMUL = 100;
+#define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 10
 #else
 # include <Adafruit_SSD1306.h>
 # include <Adafruit_GFX.h>
@@ -48,29 +50,29 @@ PeerListener listener;
 DisplayInfo displayInfo;
 
 //Change to true to enable encryption
-bool encryptESPNOW = false;
+bool encryptESPNOW = true;
 
 //Each of these must contain a 16 byte string
-static const char *pmk = "<PMK here>";
-static const char *lmk = "<LMK here>";
+static const char *pmk = "<PMK Here>";
+static const char *lmk = "<LMK Here>";
 
 //Username you want to show up on other displays
-char userName[] = "board 2";
+char userName[] = "Sidragon";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
 //origional macs
 char macAddr[][13] = {
-  {"F412FA745B2C"}, // board 1
-  //{"F412FA744A5C"}, // board 2
-  {"F412FA745B84"}, // board 3
-  {"F412FA75F1D0"}, // board 4
-  {"F412FA744AA4"}, // board 5
-  {"F412FA744C38"}, //board 6
-  {"F412FA74DE00"}, //board 7
-  {"F412FA74492C"}, //board 8
-  {"F412FA7449F8"}, //board 9
-  {"F412FA745B0C"}, //board 10
+  {"F412FA745B2C"}, // board 1 PonyBoy
+  {"F412FA744A5C"}, // board 2 Sidragon
+  {"F412FA745B84"}, // board 3 Coffeeholic
+  {"F412FA75F1D0"}, // board 4 CyberHappy
+  {"F412FA744AA4"}, // board 5 McWill
+  {"F412FA744C38"}, //board 6 
+  {"F412FA74DE00"}, //board 7 Flipper
+  {"F412FA74492C"}, //board 8 CareBear
+  {"F412FA7449F8"}, //board 9 DJDrewX
+  {"F412FA745B0C"}, //board 10 
 };
 /*
 //spoofed macs
@@ -357,7 +359,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     handleDisplay
     , "Print peers"
-    , 8192
+    , 32768
     , NULL
     , 1
     , NULL
@@ -419,7 +421,7 @@ void checkForDeadPeers(void* pvParameters)
         //Serial.printf("Removing Peer %i\n", i);
           if(xMutex != NULL)
           {
-            if(xSemaphoreTake(xMutex, listener.getMaxDelay()) == pdTRUE)
+            if(xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE)
             {
               listener.removeDeadPeer(i);
               listener.removePeer();
@@ -461,7 +463,8 @@ void handleDisplay(void* pvParameters)
       delay(SCREEN_REFRESH);
       checkLogoTime();
 
-      if(xSemaphoreTake(xMutex, listener.getMaxDelay()) == pdTRUE)
+      //Thread must share nicely with other functions. Otherwise it will crash
+      if(xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE)
       {
         int peers = listener.getNumCurPeer();
         //Load list into local array and sort
@@ -491,8 +494,10 @@ void handleDisplay(void* pvParameters)
         //Scroll through peers if there are too many to fit on the screen
         else if(peers > 5)
         {
+          Serial.print("Heap memory: ");
+          Serial.println(heap_caps_get_free_size(MALLOC_CAP_8BIT));
           Serial.println("Peer loop: ");
-          for(int i = 0; i < peers-4; i++)
+          for(int i = 0; i < peers-5; i++)
           {
             Heltec.display->clear();
             //Serial.println(i);
@@ -519,12 +524,14 @@ void handleDisplay(void* pvParameters)
           }
           Serial.println("reverse");
           //Display peers is reverse order
+          
           for(int i = peers; i > 5; i--)
           {
             
             Heltec.display->clear();
             for(int j = i-5; j < i; j++)
             {
+              Serial.println(j);
               char *tempUserName = displayInfo.getUserName(j);
               //Serial.printf("Username: %s\n", tempUserName);
               snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(j));
@@ -586,7 +593,8 @@ void handleDisplay(void* pvParameters)
 #endif
       }
       xSemaphoreGive(xMutex);
-    } 
+    }
+    
   }
   return;
 }

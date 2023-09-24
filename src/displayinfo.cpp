@@ -46,10 +46,6 @@ void DisplayInfo::sortPeers()
             //iterations++;
                 int8_t rssiPlaceHolder;
                 char namePlaceHolder[32];
-                Serial.print("Comparing ");
-                Serial.print( sortedRssi[j]);
-                Serial.print(" to ");
-                Serial.println(sortedRssi[j+1]);
 
                 if((this->sortedRssi[j] < this->sortedRssi[j+1]))
                 {
@@ -68,10 +64,11 @@ void DisplayInfo::sortPeers()
                     //Serial.printf("Placing name in %i\n", j+1);
                     memcpy(this->sortedUserNameList[j+1], namePlaceHolder, 31);
                     swap = true;
-                    if(j+1 == 2)
-                    {
-                        //Serial.printf("Error may be happening at %i\n", i);
-                    }
+                }
+                if(j > peers)
+                {
+                    swap = false;
+                    break;
                 }
 
                 
@@ -82,15 +79,4 @@ void DisplayInfo::sortPeers()
             }
         }
     }
-    for(int i = 0; i < 32; i++)
-    {
-        Serial.print("Rssi: ");
-        Serial.print(this->sortedRssi[i]);
-        Serial.print(" username: ");
-        Serial.println(this->sortedUserNameList[i]);
-    }
-    Serial.printf("Iterations: %i\n", iterations);
-    Serial.println();
-    Serial.println();
-    Serial.println();
 }
