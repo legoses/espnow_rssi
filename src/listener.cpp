@@ -88,13 +88,12 @@ int PeerListener::dataRecv(const uint8_t *mac, const uint8_t *incomingData)
     char buf[18];
     
     //Serial.println("recv Data");
-    ////Serial.print("Recieved MAC: ");
     //snprintf(buf, sizeof(buf), "%02x:%02x:%02x::%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     //Serial.print("Recieved identifier");
-    for(int i = 0; i < 16; i++)
-    {
+    //for(int i = 0; i < 16; i++)
+    //{
         //Serial.print(recvInfo.selfIdentifier[i]);
-    }
+    //}
     //Serial.println();
     //Serial.print("Recv Username: ");
     //Serial.println(recvInfo.userName);
