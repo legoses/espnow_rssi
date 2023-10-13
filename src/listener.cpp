@@ -23,11 +23,11 @@ void PeerListener::send_esp()
   esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendInfo, sizeof(sendInfo));
   if(result == ESP_OK)
   {
-    //Serial.println("Sent With Success");
+    Serial.println("Sent With Success");
   }
   else 
   {
-    //Serial.println("Error Sending Data");
+    Serial.println("Error Sending Data");
   }
 
 }

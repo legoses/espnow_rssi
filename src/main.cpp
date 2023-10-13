@@ -8,9 +8,10 @@
 
 /*
   TODO:
-  Get the macs and flash last 5 boards
-  Fix sorting
-  figure out why new boards appear twice on other devices
+  Try to get espnow to broadcast to all devices in the area instead of specific whitelisted device.
+  Espnow does not support multicast encrypted broadcasting. Going to try changing the mac of each board to a single address and broadcasting to that
+
+  Currently this seems to work, but I will need to test with more boards
 */
 
 #include <Arduino.h>
@@ -30,10 +31,6 @@
 
 #ifdef heltec_wifi_kit_32_V3
 # include "heltec.h"
-#define Fbattery 3700;
-float XS = 0.0025;      //The returned reading is multiplied by this XS to get the battery voltage.
-uint16_t MUL = 1000;
-uint16_t MMUL = 100;
 #define CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM 10
 #else
 # include <Adafruit_SSD1306.h>
@@ -57,22 +54,13 @@ static const char *pmk = "<PMK Here>";
 static const char *lmk = "<LMK Here>";
 
 //Username you want to show up on other displays
-char userName[] = "Sidragon";
+char userName[] = "legoses";
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
 //origional macs
 char macAddr[][13] = {
-  {"F412FA745B2C"}, // board 1 PonyBoy
-  {"F412FA744A5C"}, // board 2 Sidragon
-  {"F412FA745B84"}, // board 3 Coffeeholic
-  {"F412FA75F1D0"}, // board 4 CyberHappy
-  {"F412FA744AA4"}, // board 5 McWill
-  {"F412FA744C38"}, //board 6 
-  {"F412FA74DE00"}, //board 7 Flipper
-  {"F412FA74492C"}, //board 8 CareBear
-  {"F412FA7449F8"}, //board 9 DJDrewX
-  {"F412FA745B0C"}, //board 10 
+  {"F412FA66EB00"}, // global mac
 };
 const int SCREEN_REFRESH = 2500;
 
@@ -101,10 +89,19 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 
 void init_wifi()
 {
-  
+  const uint8_t broadcastMac[6] = {0xF4, 0x12, 0xFA, 0x66, 0xEB, 0x00};
   //set default wifi config as recommended by docs
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
+
+  if(esp_wifi_set_mac(WIFI_IF_STA, broadcastMac) != ESP_OK)
+  {
+    while(true)
+    {
+      Serial.println("Unable to set mac");
+      delay(5000);
+    }
+  }
 
   esp_wifi_set_mode(WIFI_MODE_STA);
 
@@ -184,9 +181,12 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 //Handle any incoming packets
 void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 {
-  wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
-  int8_t packetRssi = rssiInfo->rx_ctrl.rssi;
-  listener.promiscuousRecv(packetRssi);
+  if(type == WIFI_PKT_MGMT)
+  {
+    wifi_promiscuous_pkt_t *rssiInfo = (wifi_promiscuous_pkt_t *)buf;
+    int8_t packetRssi = rssiInfo->rx_ctrl.rssi;
+    listener.promiscuousRecv(packetRssi);
+  }
 }
 
 
