@@ -20,6 +20,7 @@
 #include <listener.h>
 #include <displayinfo.h>
 #include <esp_heap_caps.h>
+#include "SPIFFS.h"
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -50,11 +51,12 @@ DisplayInfo displayInfo;
 bool encryptESPNOW = true;
 
 //Each of these must contain a 16 byte string
-static const char *pmk = "<PMK Here>";
-static const char *lmk = "<LMK Here>";
+char pmk[17];
+char lmk[17];
 
 //Username you want to show up on other displays
-char userName[] = "legoses";
+//char userName[] = "legoses";
+char userName[33];
 
 //Insert the MAC addresses of the boards this board will be communicating with
 //Insert mac address ad string, removing colons
@@ -187,6 +189,76 @@ void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
     int8_t packetRssi = rssiInfo->rx_ctrl.rssi;
     listener.promiscuousRecv(packetRssi);
   }
+}
+
+
+void importConfig(File file, char *param, int maxSize, char buf[])
+{
+  file.seek(0);
+  int i = 0;
+  int addToString = 0;
+
+  //Make sure the parameter exists in the file
+  if(file.find(param))
+  {
+    Serial.printf("%s found. Pointer postion %i\n", param, file.position());
+  }
+  else{
+    Serial.printf("[Warning] %s not found.\n", param);
+    return;
+  }
+
+  int read = 0;
+  //Read the value into given buffer
+  while(file.available() && file.peek() != '\n' && i < maxSize)
+  {
+    if(read == 0)
+    {
+      //Skip any white space between the parameter and the actual value
+      if(file.peek() != ' ')
+      {
+        read = 1;
+      }
+      else{
+        file.read();
+      }
+    }
+
+    if(read == 1)
+    {
+      buf[i] = file.read();
+      i++;
+    }
+  }
+  buf[i] = '\0';
+
+}
+
+
+void openConfig()
+{
+  if(!SPIFFS.begin(true))
+  {
+    Serial.println("[Error] Unable to start SPIFFS");
+    return;
+  }
+
+  char lmkConf[] = "lmk:", pmkConf[] = "pmk:", usernameConf[] = "username:";
+
+  File file = SPIFFS.open("/board.cfg");
+
+  if(!file || file.isDirectory())
+  {
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+
+  importConfig(file, lmkConf, 16, lmk);
+  importConfig(file, pmkConf, 16, pmk);
+  importConfig(file, usernameConf, 32, userName);
+
+
+  file.close();
 }
 
 
