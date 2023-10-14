@@ -269,6 +269,7 @@ void checkForDeadPeers(void *pvParameters);
 void setup() {
   Serial.begin(115200);
   xMutex = xSemaphoreCreateMutex();
+  openConfig();
 
   //Set username and check size
   if(listener.setUserName(userName, sizeof(userName)) != 0)
