@@ -20,7 +20,7 @@
 #include <listener.h>
 #include <displayinfo.h>
 #include <esp_heap_caps.h>
-#include "SPIFFS.h"
+
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -44,34 +44,27 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
-PeerListener listener;
-DisplayInfo displayInfo;
-
-//Change to true to enable encryption
-bool encryptESPNOW = true;
+/* USER CONFIG */
+bool encryptESPNOW = false; //Change to true to enable encryption
 
 //Each of these must contain a 16 byte string
-char pmk[17];
-char lmk[17];
+static const char *pmk = "<PMK here>";
+static const char *lmk = "<LMK here">;
 
 //Username you want to show up on other displays
-//char userName[] = "legoses";
-char userName[33];
+char userName[] = "<Username here>";
+/* END OF USER CONFIG */
 
-//Insert the MAC addresses of the boards this board will be communicating with
-//Insert mac address ad string, removing colons
-//origional macs
-char macAddr[][13] = {
-  {"F412FA66EB00"}, // global mac
-};
 const int SCREEN_REFRESH = 2500;
+
+PeerListener listener;
+DisplayInfo displayInfo;
 
 //Hold mac address once parsed
 uint8_t broadcastAddress[20][6];
 
 int numCurPeer = 0;
 
-int macNum = sizeof(macAddr) / sizeof(macAddr[0]);
 long timeSinceLastLogo = 0;
 
 esp_now_peer_info_t peerInfo;
@@ -116,32 +109,19 @@ void addPeerInfo()
 {
   //Set channel
   peerInfo.channel = 0;
-  
-  uint8_t hexVal;
-  char tmpStr[2];
-
-  //Iterate through mac addresses
-  for(int j = 0; j < macNum; j++)
-  {
-    //Parse mac address and convert from string to hex value
-    for(int i = 0; i < 12; i++)
-    {
-      if((i % 2 == 0) || (i == 0))
-      {
-        tmpStr[0] = macAddr[j][i];
-        tmpStr[1] = macAddr[j][i+1];
-        hexVal = (uint8_t)strtol(tmpStr, NULL, 16);
-        broadcastAddress[j][i/2] = hexVal;
-      }
-    }
-  memcpy(peerInfo.peer_addr, broadcastAddress[j], 6);
+  uint8_t macAddr[] = {0xF4, 0x12, 0xFA, 0x66, 0xEB, 0x00};
+  memcpy(peerInfo.peer_addr, macAddr, 6);
 
   for(int i = 0; i < 16; i++)
   {
     peerInfo.lmk[i] = lmk[i];
   }
+  
   peerInfo.encrypt = encryptESPNOW;
-  esp_now_add_peer(&peerInfo);
+
+  if(esp_now_add_peer(&peerInfo) != ESP_OK)
+  {
+    Serial.println("Failed to add peer");
   }
 }
 
@@ -176,7 +156,7 @@ void displayLogos()
 //Handle espnow packets
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
-  ////Serial.println("DATA RECIEVED");
+  Serial.println("DATA RECIEVED");
   listener.dataRecv(mac, incomingData);
 }
 
@@ -192,76 +172,6 @@ void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 }
 
 
-void importConfig(File file, char *param, int maxSize, char buf[])
-{
-  file.seek(0);
-  int i = 0;
-  int addToString = 0;
-
-  //Make sure the parameter exists in the file
-  if(file.find(param))
-  {
-    Serial.printf("%s found. Pointer postion %i\n", param, file.position());
-  }
-  else{
-    Serial.printf("[Warning] %s not found.\n", param);
-    return;
-  }
-
-  int read = 0;
-  //Read the value into given buffer
-  while(file.available() && file.peek() != '\n' && i < maxSize)
-  {
-    if(read == 0)
-    {
-      //Skip any white space between the parameter and the actual value
-      if(file.peek() != ' ')
-      {
-        read = 1;
-      }
-      else{
-        file.read();
-      }
-    }
-
-    if(read == 1)
-    {
-      buf[i] = file.read();
-      i++;
-    }
-  }
-  buf[i] = '\0';
-
-}
-
-
-void openConfig()
-{
-  if(!SPIFFS.begin(true))
-  {
-    Serial.println("[Error] Unable to start SPIFFS");
-    return;
-  }
-
-  char lmkConf[] = "lmk:", pmkConf[] = "pmk:", usernameConf[] = "username:";
-
-  File file = SPIFFS.open("/board.cfg");
-
-  if(!file || file.isDirectory())
-  {
-    Serial.println("Failed to open file for reading");
-    return;
-  }
-
-  importConfig(file, lmkConf, 16, lmk);
-  importConfig(file, pmkConf, 16, pmk);
-  importConfig(file, usernameConf, 32, userName);
-
-
-  file.close();
-}
-
-
 void handleDisplay(void *pvParameters);
 void checkForDeadPeers(void *pvParameters);
 
@@ -269,7 +179,6 @@ void checkForDeadPeers(void *pvParameters);
 void setup() {
   Serial.begin(115200);
   xMutex = xSemaphoreCreateMutex();
-  openConfig();
 
   //Set username and check size
   if(listener.setUserName(userName, sizeof(userName)) != 0)
@@ -315,8 +224,10 @@ void setup() {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
-  esp_now_set_pmk((uint8_t*)pmk); //Set primary master key for encryption
+
   addPeerInfo();
+
+  Serial.println(esp_now_set_pmk((uint8_t*)pmk)); //Set primary master key for encryption
 
   //Tasks to run on second core
   //When creating these functions, make sure they have some sort of return or vTaskDelete90, even if they are void
@@ -363,7 +274,8 @@ void loop() {
   //Setting first value to NULL will send data to all registered peers
   //esp_err_t result = esp_now_send(NULL, (uint8_t*)&sendMessage, sizeof(sendMessage));
   delay(2000);
-  ////Serial.println();
+  //Serial.println("Encrypted Peers:");
+  //Serial.println(esp_now_peer_num->encrypt_num);
 }
 
 

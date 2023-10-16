@@ -6,7 +6,7 @@
 
 int PeerListener::setUserName(char *userName, int size)
 {
-    if(size < 32)
+    if(size <= 32)
     {
         strcpy(sendInfo.userName, userName);
     }
