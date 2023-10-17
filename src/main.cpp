@@ -44,15 +44,22 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
+
+/*
+  TODO:
+  Make sure program does not crash if there are more than 25 peers
+  Figure out how to use debugger to ensure I have not caused a memory leak
+*/
+
 /* USER CONFIG */
 bool encryptESPNOW = false; //Change to true to enable encryption
 
 //Each of these must contain a 16 byte string
 static const char *pmk = "<PMK here>";
-static const char *lmk = "<LMK here">;
+static const char *lmk = "<LMK here>";
 
 //Username you want to show up on other displays
-char userName[] = "<Username here>";
+char userName[] = "<UserName Here>";
 /* END OF USER CONFIG */
 
 const int SCREEN_REFRESH = 2500;
@@ -352,7 +359,12 @@ void handleDisplay(void* pvParameters)
         ////Serial.println("Loading arrays...");
         displayInfo.updatePeers();
         ////Serial.println("Sorting arrays...");
-        displayInfo.sortPeers();
+        //displayInfo.sortPeers();
+
+        int8_t *sortRssi = displayInfo.getRssi();
+        char **sortUserName = displayInfo.getUserName();
+
+
 
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
@@ -367,6 +379,11 @@ void handleDisplay(void* pvParameters)
         char tmpRssi[6];
         Serial.print("PEERS: ");
         Serial.println(peers);
+
+        if(peers > 0)
+        {
+          Serial.printf("Printing: %s\n", sortUserName[0]);
+        }
         
         if(peers == 0)
         {
@@ -385,16 +402,17 @@ void handleDisplay(void* pvParameters)
             for(int j = i; j < i+5; j++)
             {
               Serial.println(j);
-              char *tempUserName = displayInfo.getUserName(j);
+              //Fix this to return entire array instead of calling one username at a time
+              //char *tempUserName = displayInfo.getUserName(j);
               //Serial.printf("Username: %s\n", tempUserName);
-              snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(j));
+              snprintf(tmpRssi, 5, "%d", sortRssi[j]);
 
               char placeNum[10];
               snprintf(placeNum, 10, "%i. ", j+1);
               ////Serial.println(placeNum);
               
               Heltec.display->drawString(0, yCursorPos, placeNum);
-              Heltec.display->drawString(15, yCursorPos, tempUserName);
+              Heltec.display->drawString(15, yCursorPos, sortUserName[j]);
               Heltec.display->drawString(80, yCursorPos, tmpRssi);
               yCursorPos+=10;
               
@@ -402,6 +420,16 @@ void handleDisplay(void* pvParameters)
             Heltec.display->display();
             delay(1500);
             yCursorPos = 5;
+
+            //This needs to be tested
+            if(i % 3 == 0)
+            {
+              displayInfo.updatePeers();
+              //free(sortRssi);
+              //free(sortUserName);
+              sortRssi = displayInfo.getRssi();
+              sortUserName = displayInfo.getUserName();
+            }
           }
           Serial.println("reverse");
           //Display peers is reverse order
@@ -413,16 +441,16 @@ void handleDisplay(void* pvParameters)
             for(int j = i-5; j < i; j++)
             {
               Serial.println(j);
-              char *tempUserName = displayInfo.getUserName(j);
+              //char *tempUserName = displayInfo.getUserName(j);
               //Serial.printf("Username: %s\n", tempUserName);
-              snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(j));
+              snprintf(tmpRssi, 5, "%d", sortRssi[j]);
 
               char placeNum[10];
               snprintf(placeNum, 10, "%i. ", j+1);
               ////Serial.println(placeNum);
               
               Heltec.display->drawString(0, yCursorPos, placeNum);
-              Heltec.display->drawString(15, yCursorPos, tempUserName);
+              Heltec.display->drawString(15, yCursorPos, sortUserName[j]);
               Heltec.display->drawString(80, yCursorPos, tmpRssi);
               yCursorPos+=10;
               
@@ -430,22 +458,39 @@ void handleDisplay(void* pvParameters)
             Heltec.display->display();
             delay(1500);
             yCursorPos = 5;
+
+            //This needs to be tested
+            if(i % 3 == 0)
+            {
+              displayInfo.updatePeers();
+              //free(sortRssi);
+              //free(sortUserName);
+              sortRssi = displayInfo.getRssi();
+              sortUserName = displayInfo.getUserName();
+            }
           }
         }
         else
         {
           for(int i = 0; i < peers; i++)
           {
-            char *tempUserName = displayInfo.getUserName(i);
+            Serial.println("TESTING");
+
+            displayInfo.updatePeers();
+            //free(sortRssi);
+            //free(sortUserName);
+            sortRssi = displayInfo.getRssi();
+            sortUserName = displayInfo.getUserName();
+            //char *tempUserName = displayInfo.getUserName(i);
             //Serial.printf("Username: %s\n", tempUserName);
-            snprintf(tmpRssi, 5, "%d", displayInfo.getRssi(i));
+            snprintf(tmpRssi, 5, "%d", sortRssi[i]);
 
             char placeNum[10];
             snprintf(placeNum, 10, "%i. ", i+1);
             ////Serial.println(placeNum);
 
             Heltec.display->drawString(0, yCursorPos, placeNum);
-            Heltec.display->drawString(15, yCursorPos, tempUserName);
+            Heltec.display->drawString(15, yCursorPos, sortUserName[i]);
             Heltec.display->drawString(80, yCursorPos, tmpRssi);
             yCursorPos+=10;
           }

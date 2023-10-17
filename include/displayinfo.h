@@ -7,13 +7,15 @@
 class DisplayInfo : public PeerInfo
 {
     int8_t sortedRssi[ORDERED_LIST_LEN];
-    char sortedUserNameList[ORDERED_LIST_LEN][32];
+    //char sortedUserNameList[ORDERED_LIST_LEN][32];
+    char **sortedUserNameList;
 
     public:
+        DisplayInfo();
         void updatePeers();
         void sortPeers();
-        int8_t getRssi(int i);
-        char *getUserName(int i);
+        int8_t *getRssi();
+        char **getUserName();
 };
 
 #endif
