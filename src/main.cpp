@@ -413,7 +413,7 @@ void handleDisplay(void* pvParameters)
               
               Heltec.display->drawString(0, yCursorPos, placeNum);
               Heltec.display->drawString(15, yCursorPos, sortUserName[j]);
-              Heltec.display->drawString(80, yCursorPos, tmpRssi);
+              Heltec.display->drawString(100, yCursorPos, tmpRssi);
               yCursorPos+=10;
               
             }
@@ -427,8 +427,8 @@ void handleDisplay(void* pvParameters)
               displayInfo.updatePeers();
               //free(sortRssi);
               //free(sortUserName);
-              sortRssi = displayInfo.getRssi();
-              sortUserName = displayInfo.getUserName();
+              //sortRssi = displayInfo.getRssi();
+              //sortUserName = displayInfo.getUserName();
             }
           }
           Serial.println("reverse");
@@ -451,7 +451,7 @@ void handleDisplay(void* pvParameters)
               
               Heltec.display->drawString(0, yCursorPos, placeNum);
               Heltec.display->drawString(15, yCursorPos, sortUserName[j]);
-              Heltec.display->drawString(80, yCursorPos, tmpRssi);
+              Heltec.display->drawString(100, yCursorPos, tmpRssi);
               yCursorPos+=10;
               
             }
@@ -465,8 +465,8 @@ void handleDisplay(void* pvParameters)
               displayInfo.updatePeers();
               //free(sortRssi);
               //free(sortUserName);
-              sortRssi = displayInfo.getRssi();
-              sortUserName = displayInfo.getUserName();
+              //sortRssi = displayInfo.getRssi();
+              //sortUserName = displayInfo.getUserName();
             }
           }
         }
@@ -476,11 +476,6 @@ void handleDisplay(void* pvParameters)
           {
             Serial.println("TESTING");
 
-            displayInfo.updatePeers();
-            //free(sortRssi);
-            //free(sortUserName);
-            sortRssi = displayInfo.getRssi();
-            sortUserName = displayInfo.getUserName();
             //char *tempUserName = displayInfo.getUserName(i);
             //Serial.printf("Username: %s\n", tempUserName);
             snprintf(tmpRssi, 5, "%d", sortRssi[i]);
@@ -491,10 +486,14 @@ void handleDisplay(void* pvParameters)
 
             Heltec.display->drawString(0, yCursorPos, placeNum);
             Heltec.display->drawString(15, yCursorPos, sortUserName[i]);
-            Heltec.display->drawString(80, yCursorPos, tmpRssi);
+            Heltec.display->drawString(100, yCursorPos, tmpRssi);
             yCursorPos+=10;
           }
         }
+        
+        //Serial.printf("Old RSSI: %i\n", sortRssi[0]);
+        displayInfo.updatePeers();
+        //Serial.printf("New RSSI: %i\n", sortRssi[0]);
         Heltec.display->display();
 
 //Display peers on ssd1306
