@@ -4,3 +4,4 @@
 .vscode/ipch
 .pio/*
 data/board.cfg
+!.pio/libdeps/heltec_wifi_kit_32_V3/
