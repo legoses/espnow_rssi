@@ -2,7 +2,5 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
-.pio/build
-.pio/libdeps/*
+.pio/
 data/board.cfg
-!.pio/libdeps/heltec_wifi_kit_32_V3
