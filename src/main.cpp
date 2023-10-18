@@ -44,23 +44,25 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
-
-/*
-  TODO:
-  Make sure program does not crash if there are more than 25 peers
-  Figure out how to use debugger to ensure I have not caused a memory leak
-*/
-
 /* USER CONFIG */
+//Username you want to show up on other displays
+char userName[] = "<UserName Here>";
+
 bool encryptESPNOW = false; //Change to true to enable encryption
 
 //Each of these must contain a 16 byte string
 static const char *pmk = "<PMK here>";
 static const char *lmk = "<LMK here>";
 
-//Username you want to show up on other displays
-char userName[] = "<UserName Here>";
+
 /* END OF USER CONFIG */
+
+
+/*
+  TODO:
+  Make sure program does not crash if there are more than 25 peers
+  Figure out how to use debugger to ensure I have not caused a memory leak
+*/
 
 const int SCREEN_REFRESH = 2500;
 
@@ -425,10 +427,6 @@ void handleDisplay(void* pvParameters)
             if(i % 3 == 0)
             {
               displayInfo.updatePeers();
-              //free(sortRssi);
-              //free(sortUserName);
-              //sortRssi = displayInfo.getRssi();
-              //sortUserName = displayInfo.getUserName();
             }
           }
           Serial.println("reverse");
@@ -463,10 +461,6 @@ void handleDisplay(void* pvParameters)
             if(i % 3 == 0)
             {
               displayInfo.updatePeers();
-              //free(sortRssi);
-              //free(sortUserName);
-              //sortRssi = displayInfo.getRssi();
-              //sortUserName = displayInfo.getUserName();
             }
           }
         }
