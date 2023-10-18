@@ -1,9 +1,6 @@
 #include <display_username.h>
 #include "heltec.h"
 
-extern float XS;      //The returned reading is multiplied by this XS to get the battery voltage.
-extern uint16_t MUL;
-extern uint16_t MMUL;
 
 void appendLen(char userName[])
 {
