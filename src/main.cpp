@@ -62,6 +62,7 @@ static const char *lmk = "<LMK here>";
   TODO:
   Make sure program does not crash if there are more than 25 peers
   Figure out how to use debugger to ensure I have not caused a memory leak
+  Make logos optional
 */
 
 const int SCREEN_REFRESH = 2500;
@@ -77,9 +78,6 @@ int numCurPeer = 0;
 long timeSinceLastLogo = 0;
 
 esp_now_peer_info_t peerInfo;
-
-int lineCount = 0;
-int file = 0;
 
 //Create mutex to lock objects and prevent race conditions
 SemaphoreHandle_t xMutex = NULL;
@@ -140,6 +138,7 @@ void displayLogos()
   int screenEdgeBuf = ((img_buffer / 2) * -1) + 10;
   int pimaLogoDelay = 0;
 
+  //Have pima logo move across the screen
   for(int i = 28; i > screenEdgeBuf; i-=2)
   {
     Heltec.display->clear();
@@ -202,8 +201,6 @@ void setup() {
   Heltec.display->init();
   Heltec.display->clear();
   Heltec.display->setFont(ArialMT_Plain_10);
- 
-  //displayUsername(userName);
   
   displayLogos();
 
@@ -350,6 +347,7 @@ void handleDisplay(void* pvParameters)
   {
     if(xMutex != NULL)
     {
+      //Play logos if a certain period of time has passed
       delay(SCREEN_REFRESH);
       checkLogoTime();
 
@@ -363,18 +361,19 @@ void handleDisplay(void* pvParameters)
         ////Serial.println("Sorting arrays...");
         //displayInfo.sortPeers();
 
+        //These arrays hold the sorted information that will be displayed on the screen
         int8_t *sortRssi = displayInfo.getRssi();
         char **sortUserName = displayInfo.getUserName();
 
 
-
+Heltec.display->clear();
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
-        //Heltec.display->clear();
+        Heltec.display->clear();
         //displayUsername(userName);
-        Heltec.display->setColor(BLACK);
-        Heltec.display->fillRect(0, 0, 100, 64);
-        Heltec.display->setColor(WHITE);
+        //Heltec.display->setColor(BLACK);
+        //Heltec.display->fillRect(0, 0, 100, 64);
+        //Heltec.display->setColor(WHITE);
         
         //dispBat();
         int yCursorPos = 5;
@@ -382,11 +381,7 @@ void handleDisplay(void* pvParameters)
         Serial.print("PEERS: ");
         Serial.println(peers);
 
-        if(peers > 0)
-        {
-          Serial.printf("Printing: %s\n", sortUserName[0]);
-        }
-        
+        //Display this message if there are no other peers
         if(peers == 0)
         {
           Heltec.display->drawString(0, yCursorPos, "You Are Alone.");
@@ -423,7 +418,7 @@ void handleDisplay(void* pvParameters)
             delay(1500);
             yCursorPos = 5;
 
-            //This needs to be tested
+            //Update and sort peer information every three iterations
             if(i % 3 == 0)
             {
               displayInfo.updatePeers();
@@ -457,7 +452,7 @@ void handleDisplay(void* pvParameters)
             delay(1500);
             yCursorPos = 5;
 
-            //This needs to be tested
+            //Update and sort peer information every three iterations
             if(i % 3 == 0)
             {
               displayInfo.updatePeers();
@@ -466,10 +461,10 @@ void handleDisplay(void* pvParameters)
         }
         else
         {
+          //Display all usernames on the screen at once
+          Heltec.display->clear();
           for(int i = 0; i < peers; i++)
           {
-            Serial.println("TESTING");
-
             //char *tempUserName = displayInfo.getUserName(i);
             //Serial.printf("Username: %s\n", tempUserName);
             snprintf(tmpRssi, 5, "%d", sortRssi[i]);
@@ -485,9 +480,6 @@ void handleDisplay(void* pvParameters)
           }
         }
         
-        //Serial.printf("Old RSSI: %i\n", sortRssi[0]);
-        displayInfo.updatePeers();
-        //Serial.printf("New RSSI: %i\n", sortRssi[0]);
         Heltec.display->display();
 
 //Display peers on ssd1306

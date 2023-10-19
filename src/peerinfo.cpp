@@ -1,3 +1,5 @@
+//The main purpose of this file is to keep track of the current numbers of peers
+
 #include <peerinfo.h>
 
 int PeerInfo::numCurPeer = 0;
@@ -9,7 +11,6 @@ long PeerInfo::lastSeen[ORDERED_LIST_LEN];
 PeerInfo::PeerInfo()
 {
     xMutex = xSemaphoreCreateMutex();
-
 }
 
 

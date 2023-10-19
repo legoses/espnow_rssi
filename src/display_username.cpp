@@ -2,6 +2,7 @@
 #include "heltec.h"
 
 
+//If username exceeds 32 characters, shorten username and append '...' to the end
 void appendLen(char userName[])
 {
     char dots[] = "...";
@@ -26,6 +27,7 @@ void appendLen(char userName[])
 }
 
 
+//Delete later, this isn't supposed to work
 void displayUsername(char *userName)
 {
   Heltec.display->clear();
