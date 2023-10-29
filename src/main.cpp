@@ -8,10 +8,7 @@
 
 /*
   TODO:
-  Try to get espnow to broadcast to all devices in the area instead of specific whitelisted device.
-  Espnow does not support multicast encrypted broadcasting. Going to try changing the mac of each board to a single address and broadcasting to that
-
-  Currently this seems to work, but I will need to test with more boards
+  Implement config file option for username and choice of encryption
 */
 
 #include <Arduino.h>
@@ -20,7 +17,7 @@
 #include <listener.h>
 #include <displayinfo.h>
 #include <esp_heap_caps.h>
-
+#include <SPIFFS.h>
 
 #define heltec_wifi_kit_32_V3
 #define USE_MUTEX
@@ -46,13 +43,13 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 /* USER CONFIG */
 //Username you want to show up on other displays
-char userName[] = "<UserName Here>";
+char userName[] = "<Insert Username Here>";
 
-bool encryptESPNOW = false; //Change to true to enable encryption
+bool encryptESPNOW = true; //Change to true to enable encryption
 
 //Each of these must contain a 16 byte string
-static const char *pmk = "<PMK here>";
-static const char *lmk = "<LMK here>";
+//static const char *pmk = "<Insert PMK Here>";
+//static const char *lmk = "<Insert LMK Here>";
 
 
 /* END OF USER CONFIG */
@@ -111,6 +108,34 @@ void init_wifi()
 }
 
 
+char *getConfigVal(const char *val, int size) {
+  File file = SPIFFS.open("/board.cfg");
+  if(!file) {
+    Serial.println("Failed to open board");
+    return "1";
+  }
+
+  file.find(val);
+  Serial.print("Cursor position: ");
+  Serial.println(file.position());
+
+  char ch;
+  char *buf = (char*)malloc(sizeof(char) * size);
+  int count = 0;
+
+  while(ch != '\n' && file.available()) {
+    ch = file.read();
+    Serial.println(ch);
+    if(ch != ' ' && count < size) {
+      buf[count] = ch;
+      count++;
+    }
+  }
+  buf[count] = '\0';
+  return buf;
+}
+
+
 //Load espnow peers
 void addPeerInfo()
 {
@@ -119,8 +144,15 @@ void addPeerInfo()
   uint8_t macAddr[] = {0xF4, 0x12, 0xFA, 0x66, 0xEB, 0x00};
   memcpy(peerInfo.peer_addr, macAddr, 6);
 
+  static const char *lmk = getConfigVal("lmk:", 17);
+  Serial.print("lmk: ");
+  Serial.println(lmk);
+  Serial.println(lmk[0]);
+
   for(int i = 0; i < 16; i++)
   {
+    Serial.print("lmk: ");
+    Serial.println(lmk[i]);
     peerInfo.lmk[i] = lmk[i];
   }
   
@@ -180,6 +212,7 @@ void promiscuousRecv(void *buf, wifi_promiscuous_pkt_type_t type)
 }
 
 
+
 void handleDisplay(void *pvParameters);
 void checkForDeadPeers(void *pvParameters);
 
@@ -223,7 +256,15 @@ void setup() {
   display.display();
 #endif
 
+  //init filesystem
+  if(!SPIFFS.begin(true)) {
+    Serial.println("Unable to init SPIFFS.");
+    return;
+  }
+
   init_wifi();
+
+
 
   if(esp_now_init() != ESP_OK)
   {
@@ -233,6 +274,9 @@ void setup() {
 
   addPeerInfo();
 
+  static const char *pmk = getConfigVal("pmk:", 17);
+  Serial.print("pmk: ");
+  Serial.println(pmk);
   Serial.println(esp_now_set_pmk((uint8_t*)pmk)); //Set primary master key for encryption
 
   //Tasks to run on second core
