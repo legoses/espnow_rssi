@@ -27,6 +27,7 @@ class PeerListener : public PeerInfo
         void removeDeadPeer(int item);
         long getTimeLastSeen(int i);
         int setUserName(char* userName, int size);
+        char &getUserName();
         void nametest();
         void send_esp();
         

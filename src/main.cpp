@@ -42,23 +42,15 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
 /* USER CONFIG */
-//Username you want to show up on other displays
-char userName[] = "<Insert Username Here>";
+char *userName;
 
-bool encryptESPNOW = true; //Change to true to enable encryption
-
-//Each of these must contain a 16 byte string
-//static const char *pmk = "<Insert PMK Here>";
-//static const char *lmk = "<Insert LMK Here>";
-
-
+bool encryptESPNOW;
 /* END OF USER CONFIG */
 
 
 /*
   TODO:
   Make sure program does not crash if there are more than 25 peers
-  Figure out how to use debugger to ensure I have not caused a memory leak
   Make logos optional
 */
 
@@ -108,43 +100,75 @@ void init_wifi()
 }
 
 
-char *getConfigVal(const char *val, int size) {
+char *getConfigVal(const char *val, int size, int critical) {
   File file = SPIFFS.open("/board.cfg");
   if(!file) {
-    Serial.println("Failed to open board");
-    return "1";
+    Serial.println("Failed to open board.cfg");
+    while(1);
   }
-
-  file.find(val);
-  Serial.print("Cursor position: ");
-  Serial.println(file.position());
 
   char ch;
   char *buf = (char*)malloc(sizeof(char) * size);
   int count = 0;
 
-  while(ch != '\n' && file.available()) {
-    ch = file.read();
-    Serial.println(ch);
-    if(ch != ' ' && count < size) {
-      buf[count] = ch;
-      count++;
+  if(file.find(val)) {
+    Serial.print("Cursor position: ");
+    Serial.println(file.position());
+
+    while(ch != '\n' && file.available() && count < size) {
+      ch = file.read();
+      //Serial.println(ch);
+      if(ch != ' ') {
+        buf[count] = ch;
+        count++;
+      }
     }
+
+    //If size variable is larger than the actual string found, a line break is included at the end of the string\
+    //This checks for and overwrites with null character to mark the end of the string
+    if(count > 0) {
+      if(buf[count-1] == '\n') {
+        buf[count-1] = '\0';
+      }
+      else {
+        buf[count] = '\0';
+      }
+    }
+    
   }
-  buf[count] = '\0';
+  else if(critical == 1) {
+    Serial.printf("[ERROR] Config option %s not found!\n", val);
+    while(1);
+  }
+
   return buf;
 }
 
 
+void setEncryptStatus() {
+  char *status = getConfigVal("encrypt:", 10, 0);
+  const char *checkStatus = "true";
+
+  if(strcmp(status, checkStatus) == 0) {
+    encryptESPNOW = true;
+    Serial.println("Encryption enabled");
+  }
+  else {
+    encryptESPNOW = false;
+    Serial.println("Encryption disabled");
+  }
+}
+
+
 //Load espnow peers
-void addPeerInfo()
+void addPeerInfo(int critical)
 {
   //Set channel
   peerInfo.channel = 0;
   uint8_t macAddr[] = {0xF4, 0x12, 0xFA, 0x66, 0xEB, 0x00};
   memcpy(peerInfo.peer_addr, macAddr, 6);
 
-  static const char *lmk = getConfigVal("lmk:", 17);
+  static const char *lmk = getConfigVal("lmk:", 17, critical);
   Serial.print("lmk: ");
   Serial.println(lmk);
   Serial.println(lmk[0]);
@@ -221,6 +245,18 @@ void setup() {
   Serial.begin(115200);
   xMutex = xSemaphoreCreateMutex();
 
+  //Init filesystem
+  if(!SPIFFS.begin(true)) {
+    Serial.println("Unable to init SPIFFS.");
+    return;
+  }
+
+  userName = (char*)malloc(sizeof(char)*32);
+  userName = getConfigVal("username:", 32, 1);
+
+  //Enable or disable encryption
+  setEncryptStatus();
+
   //Set username and check size
   if(listener.setUserName(userName, sizeof(userName)) != 0)
   {
@@ -256,12 +292,6 @@ void setup() {
   display.display();
 #endif
 
-  //init filesystem
-  if(!SPIFFS.begin(true)) {
-    Serial.println("Unable to init SPIFFS.");
-    return;
-  }
-
   init_wifi();
 
 
@@ -272,9 +302,17 @@ void setup() {
     return;
   }
 
-  addPeerInfo();
+  int critical;
+  if(encryptESPNOW == true) {
+    critical = 1;
+  }
+  else {
+    critical = 0;
+  }
 
-  static const char *pmk = getConfigVal("pmk:", 17);
+  addPeerInfo(critical);
+  
+  static const char *pmk = getConfigVal("pmk:", 17, critical);
   Serial.print("pmk: ");
   Serial.println(pmk);
   Serial.println(esp_now_set_pmk((uint8_t*)pmk)); //Set primary master key for encryption
