@@ -4,14 +4,14 @@
 - Platformio must be installed. This can be adapted to work on arduino IDE, but will not as is.
 
 ### Setup
+- Before uploading this, make sure to edit the config file located at `data/board.cfg`
+- Use PlatformIO to upload filesystem image
+- Build and upload the code to your board
 - Edit the [platformio] section in the platformio.ini file to include your board. Comment out or remove any others.
-- In the 'main.cpp' file:
-    - All lines you need to edit are near the top of the file, directly under the line containing `/* USER CONFIG */`
-    - Edit `char userName[] = "<User name Here>";` to contain your username. This will be what shows up on other boards you are in range of
-    - ### Encryption
-        - If you wish to enable encryption, set 'encryptESPNOW' equal to true
-        - The 'lmk' and 'pmk' variables must contain a unique 16 byte (16 character) string
-        - Both of these must be the same for any board you wish to communicate with
+- ### Encryption
+    - If you wish to enable encryption, make sure ecrypt is set to 'true' in the config file
+    - The 'lmk' and 'pmk' options must contain a unique 16 byte (16 character) string
+    - Both of these must be the same for any board you wish to communicate with
 
 ### Knows issues
-- Ocassionaly a threat will time out and cause the program to crash
+- Ocassionaly a thread will time out and cause the program to crash
