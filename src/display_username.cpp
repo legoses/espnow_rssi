@@ -1,7 +1,7 @@
 #include <display_username.h>
 #include "heltec.h"
 
-
+#ifdef heltec_wifi_kit_32_V3
 //If username exceeds 32 characters, shorten username and append '...' to the end
 void appendLen(char userName[])
 {
@@ -55,3 +55,4 @@ void clearScreen(void) {
 
   Heltec.display->clear();
 }
+#endif

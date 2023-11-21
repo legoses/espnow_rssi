@@ -19,7 +19,7 @@
 #include <esp_heap_caps.h>
 #include <SPIFFS.h>
 
-#define heltec_wifi_kit_32_V3
+//#define heltec_wifi_kit_32_V3
 #define USE_MUTEX
 #define ARDUINO_RUNNING_CORE 1
 
@@ -36,8 +36,8 @@
 # define SCREEN_WIDTH 128
 # define SCREEN_HEIGHT 64
 # define OLED_RESET -1
-# define I2C_SDA 39
-# define I2C_SCL 38
+# define I2C_SDA 8
+# define I2C_SCL 12
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #endif
 
@@ -141,6 +141,7 @@ char *getConfigVal(const char *val, int size, int critical) {
     while(1);
   }
 
+  file.close();
   return buf;
 }
 
@@ -189,8 +190,10 @@ void addPeerInfo(int critical)
 }
 
 //Display logos on screen
+
 void displayLogos()
 {
+#ifdef heltec_wifi_kit_32_V3
   int screenEdgeBuf = ((img_buffer / 2) * -1) + 10;
   int pimaLogoDelay = 0;
 
@@ -215,7 +218,9 @@ void displayLogos()
   Heltec.display->display();
   delay(1000);
   Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
+#endif
 }
+
 
 //Handle espnow packets
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
@@ -412,7 +417,7 @@ void checkLogoTime()
 {
   if(millis() - timeSinceLastLogo > 25000)
   {
-    clearScreen();
+    //clearScreen();
 
     displayLogos();
     timeSinceLastLogo = millis();
@@ -447,8 +452,6 @@ void handleDisplay(void* pvParameters)
         int8_t *sortRssi = displayInfo.getRssi();
         char **sortUserName = displayInfo.getUserName();
 
-
-Heltec.display->clear();
 //Display peers on heltec
 #ifdef heltec_wifi_kit_32_V3
         Heltec.display->clear();
@@ -566,22 +569,61 @@ Heltec.display->clear();
 
 //Display peers on ssd1306
 #else
-        display.clearDisplay();
-        display.setCursor(0, 10);
-
-        if(listener.getNumCurPeer() == 0)
+        if(peers == 0) {
+          display.println("You are alone");
+        }
+        else if(peers > 5)
         {
-          display.println("You Are Alone.");
+          Serial.print("Heap memory: ");
+          Serial.println(heap_caps_get_free_size(MALLOC_CAP_8BIT));
+          Serial.println("Peer loop: ");
+          for(int i = 0; i < peers-5; i++)
+          {
+            display.clearDisplay();
+            //Serial.println(i);
+            for(int j = i; j < i+5; j++)
+            {
+              display.printf("%i %s %i\n", j+1, sortUserName[j], sortRssi[j]);
+            }
+            display.display();
+            delay(1500);
+
+            //Update and sort peer information every three iterations
+            if(i % 3 == 0)
+            {
+              displayInfo.updatePeers();
+            }
+          }
+          Serial.println("reverse");
+          //Display peers is reverse order
+          
+          for(int i = peers; i > 5; i--)
+          {
+            display.clearDisplay();
+            for(int j = i-5; j < i; j++)
+            {
+              display.printf("%i. %s %i\n", j+1, sortUserName[j], sortRssi[j]);
+            }
+            display.display();
+            delay(1500);
+
+            //Update and sort peer information every three iterations
+            if(i % 3 == 0)
+            {
+              displayInfo.updatePeers();
+            }
+          }
         }
         else
         {
-          for(int i = 0; i < listener.getNumCurPeer(); i++)
+          //Display all usernames on the screen at once
+          display.clearDisplay();
+          for(int i = 0; i < peers; i++)
           {
-            display.print(sortUserNameList[i]);
-            display.print("   ");
-            display.println(rssiArr[i]);
+            display.printf("%i %s %i\n", i+1, sortUserName[i], sortRssi[i]);
           }
         }
+        
         display.display();
 #endif
       }
